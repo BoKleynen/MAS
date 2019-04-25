@@ -16,20 +16,3 @@ apt-get install -y libxml2 libxml2-dev
 apt-get install -y doxygen graphviz imagemagick
 apt-get install -y texlive texlive-extra-utils texlive-latex-extra texlive-font-utils texlive-lang-portuguese dvipng latexmk
 apt-get install -y python-sphinx dia
-
-#install bake
-# if ! [ -x "$bake" ]
-# then
-#   echo "installing bake ..."
-#   BAKE_HOME="/home/vagrant/repos/bake"
-#   git clone https://gitlab.com/nsnam/bake.git $BAKE_HOME
-#   cat >> .bashrc <<EOL
-# export BAKE_HOME=$BAKE_HOME
-# export PATH=$PATH:$BAKE_HOME:$BAKE_HOME/build/bin
-# export PYTHONPATH=$PYTHONPATH:$BAKE_HOME:$BAKE_HOME/build/lib
-# alias bake=bake.py
-# EOL
-#   echo "bake installed ..."
-# else
-#   echo "bake already installed"
-# fi

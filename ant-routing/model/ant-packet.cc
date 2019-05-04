@@ -24,7 +24,11 @@ Antheader::GetInstanceTypeId () const
 uint32_t
 AntHeader::GetSerializedSize () const
 {
-  return 0;
+  return sizeof(AntType)
+    + 3*sizeof(uint8_t)
+    + sizeof(uint32_t)
+    + sizeof(Time)
+    + (1 + ) * sizeof(Ipv4Address);  // (2 + n - 1)
 }
 
 void
@@ -42,7 +46,7 @@ AntHeader::Deserialize (Buffer::Iterator start) const
 void
 AntHeader::Print (std::ostream &os) const
 {
-  os << ""
+
 }
 
 } // namespace ant_routing

@@ -2,8 +2,11 @@
 #ifndef ANTPACKET_H
 #define ANTPACKET_H
 
+#include <vector>
+#include <iostream>
 #include "ns3/header.h"
 #include "ns3/ipv4-address.h"
+#include "ns3/nstime.h"
 
 namespace ns3 {
 namespace ant_routing {
@@ -16,134 +19,45 @@ enum AntType
   BackwardAnt = 3,
 };
 
-class ReactiveForwardAnt : public Header
+/**
+0                   1                   2                   3
+0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|    Ant Type   |   Hop count   |Broadcast Count|Backward  Count|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                           Generation                          |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         Time Estimate                         |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                      Originator Address                       |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                      Destination Address                      |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                                               |
+:                       Visited Nodes                           :
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  */
+class AntHeader : public Header
 {
 public:
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
-  static TypeId GetTypeId ();
-  /**
-   * \returns the expected size of the header.
-   *
-   * This method is used by Packet::AddHeader
-   * to store a header into the byte buffer of a packet. This method
-   * should return the number of bytes which are needed to store
-   * the full header data by Serialize.
-   */
-  uint32_t GetSerializedSize () const;
-  /**
-   * \param start an iterator which points to where the header should
-   *        be written.
-   *
-   * This method is used by Packet::AddHeader to
-   * store a header into the byte buffer of a packet.
-   * The data written
-   * is expected to match bit-for-bit the representation of this
-   * header in a real network.
-   */
-  void Serialize (Buffer::Iterator start) const;
-  /**
-   * \param start an iterator which points to where the header should
-   *        read from.
-   * \returns the number of bytes read.
-   *
-   * This method is used by Packet::RemoveHeader to
-   * re-create a header from the byte buffer of a packet.
-   * The data read is expected to
-   * match bit-for-bit the representation of this header in real
-   * networks.
-   *
-   * Note that data is not actually removed from the buffer to
-   * which the iterator points.  Both Packet::RemoveHeader() and
-   * Packet::PeekHeader() call Deserialize(), but only the RemoveHeader()
-   * has additional statements to remove the header bytes from the
-   * underlying buffer and associated metadata.
-   */
-  uint32_t Deserialize (Buffer::Iterator start);
-  /**
-   * \param os output stream
-   * This method is used by Packet::Print to print the
-   * content of a header as ascii data to a c++ output stream.
-   * Although the header is free to format its output as it
-   * wishes, it is recommended to follow a few rules to integrate
-   * with the packet pretty printer: start with flags, small field
-   * values located between a pair of parens. Values should be separated
-   * by whitespace. Follow the parens with the important fields,
-   * separated by whitespace.
-   * i.e.: (field1 val1 field2 val2 field3 val3) field4 val4 field5 val5
-   */
-  void Print (std::ostream &os) const;
+   static TypeId GetTypeId ();
+   uint32_t GetSerializedSize () const;
+   void Serialize (Buffer::Iterator start) const;
+   uint32_t Deserialize (Buffer::Iterator start);
+   void Print (std::ostream &os) const;
 private:
-  Ipv4Address    dst;            ///< Destination IP Address
-  Ipv4Address    origin;         ///< Originator IP Address
+  AntType                   antType;
+  uint8_t                   hopCount;
+  uint8_t                   broadcastCount;
+  uint8_t                   backwardCount;
+  uint32_t                  generation;
+  Ipv4Address               origin;
+  Ipv4Address               dst;
+  Time                      timeEstimate;
+  std::vector<Ipv4Address>  visitedNodes;
 } // class ReactiveForwardAnt
-
-class ProactiveForwardAnt : public Header
-{
-public:
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
-  static TypeId GetTypeId ();
-  /**
-   * \returns the expected size of the header.
-   *
-   * This method is used by Packet::AddHeader
-   * to store a header into the byte buffer of a packet. This method
-   * should return the number of bytes which are needed to store
-   * the full header data by Serialize.
-   */
-  uint32_t GetSerializedSize () const;
-  /**
-   * \param start an iterator which points to where the header should
-   *        be written.
-   *
-   * This method is used by Packet::AddHeader to
-   * store a header into the byte buffer of a packet.
-   * The data written
-   * is expected to match bit-for-bit the representation of this
-   * header in a real network.
-   */
-  void Serialize (Buffer::Iterator start) const;
-  /**
-   * \param start an iterator which points to where the header should
-   *        read from.
-   * \returns the number of bytes read.
-   *
-   * This method is used by Packet::RemoveHeader to
-   * re-create a header from the byte buffer of a packet.
-   * The data read is expected to
-   * match bit-for-bit the representation of this header in real
-   * networks.
-   *
-   * Note that data is not actually removed from the buffer to
-   * which the iterator points.  Both Packet::RemoveHeader() and
-   * Packet::PeekHeader() call Deserialize(), but only the RemoveHeader()
-   * has additional statements to remove the header bytes from the
-   * underlying buffer and associated metadata.
-   */
-  uint32_t Deserialize (Buffer::Iterator start);
-  /**
-   * \param os output stream
-   * This method is used by Packet::Print to print the
-   * content of a header as ascii data to a c++ output stream.
-   * Although the header is free to format its output as it
-   * wishes, it is recommended to follow a few rules to integrate
-   * with the packet pretty printer: start with flags, small field
-   * values located between a pair of parens. Values should be separated
-   * by whitespace. Follow the parens with the important fields,
-   * separated by whitespace.
-   * i.e.: (field1 val1 field2 val2 field3 val3) field4 val4 field5 val5
-   */
-  void Print (std::ostream &os) const;
-private:
-  Ipv4Address    dst;            ///< Destination IP Address
-  Ipv4Address    origin;         ///< Originator IP Address
-} // class ProactiveForwardAnt
-
 } // namespace ant_routing
 } // namespace
 #endif /* ANTPACKET_H */

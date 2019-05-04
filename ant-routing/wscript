@@ -9,26 +9,32 @@
 def build(bld):
     module = bld.create_ns3_module('ant-routing', ['internet',])
     module.includes = '.'
+    module.cxxflags = ['-std=c++11','-std=c++14']
     module.source = [
         'model/ant-routing.cc',
         'model/ant-routing-table.cc',
+        'model/pheromone-routing-table-entry.cc',
         'helper/ant-routing-helper.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('ant-routing')
     module_test.source = [
         'test/ant-routing-test-suite.cc',
+        'test/routing-table-test-suite.cc',
         ]
 
     headers = bld(features='ns3header')
     headers.module = 'ant-routing'
+    headers.cxxflags = ['-std=c++11','-std=c++14']
     headers.source = [
         'model/ant-routing.h',
         'model/ant-routing-table.h',
+        'model/pheromone-routing-table-entry.h',
         'helper/ant-routing-helper.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:
         bld.recurse('examples')
+
 
     # bld.ns3_python_bindings()

@@ -69,7 +69,7 @@ private:
   Ipv4Address               m_dst;
   Time                      m_timeEstimate;
   std::vector<Ipv4Address>  m_visitedNodes;
-} // class ReactiveForwardAnt
+}; // class ReactiveForwardAnt
 } // namespace ant_routing
 } // namespace
 #endif /* ANTPACKET_H */

@@ -15,6 +15,7 @@ struct RtTestEntry {
   RtTestEntry();
   void Update(int i);
   int m_int;
+  static RtTestEntry defaultVal;
 };
 
 bool operator==(const RtTestEntry& lhs, const RtTestEntry& rhs);
@@ -27,6 +28,9 @@ void RtTestEntry::Update(int i) {
 RtTestEntry::RtTestEntry() : m_int(0) {
 
 }
+
+RtTestEntry RtTestEntry::defaultVal = RtTestEntry();
+
 
 bool operator==(const RtTestEntry& lhs, const RtTestEntry& rhs){
   return lhs.m_int == rhs.m_int;

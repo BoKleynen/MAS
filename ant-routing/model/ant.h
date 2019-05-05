@@ -2,28 +2,25 @@
 #ifndef ANT_H
 #define ANT_H
 
-#include "ns3/core-model.h"
+#include "ns3/core-module.h"
 
 namespace ns3 {
 namespace ant_routing {
+
+class AntHeader;
+class AnthocNetRouting;
+
 /**
  * Interface class that define the behavior of all ants
  */
 class Ant : class Object {
-
+public:
   /**
    * Type id used to hook the ant up to the metaprogramming system
    */
   static TypeId GetTypeId();
 
-  Ant() = delete;
   virtual ~Ant();
-
-  /**
-   * All ants should be cloneable, this allows us to easilly construct
-   * multiple ants from a single 'prototype ant'
-   */
-  virtual Ptr<Ant> Clone() = 0;
 
   /**
    * Each ant has a specific role to perform when it visits the node
@@ -37,7 +34,17 @@ class Ant : class Object {
    */
   virtual void Route(Ptr<AnthocnetRouting> router) = 0;
 
-  // TODO get & set header
+  /**
+   * Getter and setter for the header of the ant. This header is used
+   * to guide the ant through the system.
+   */
+  Ptr<AntHeader> GetAntHeader();
+  void SetAntHeader(Ptr<AntHeader> antHeader);
+private:
+  /**
+   * Header of the ant
+   */
+  Ptr<AntHeader> m_header;
 };
 
 } // namespace ant_routing

@@ -11,13 +11,12 @@
 namespace ns3 {
   /**
    * Named requirements for optionals
-   * constructors:
-   * default constructor
+   * static member: defaultVal
    */
   template<typename T>
   class Optional {
   public:
-    Optional() : m_ref(Optional::NoRef()), m_ok(false) {}
+    Optional() : m_ref(T::defaultVal), m_ok(false) {}
     Optional(T& ref) : m_ref(ref), m_ok(true) {}
 
     // copy operations
@@ -35,12 +34,21 @@ namespace ns3 {
       m_ok = opt.ok();
       return *this;
     }
+
     T& ref() {
       return m_ref;
     }
 
     bool ok() {
       return m_ok;
+    }
+
+    /**
+     * returns the value inside the reference, in case the reference
+     * is invalid, returns the default value.
+     */
+    const T& getValue(){
+      return ref;
     }
 
     /**
@@ -58,11 +66,6 @@ namespace ns3 {
   private:
     T& m_ref;
     bool m_ok;
-
-    static T& NoRef() {
-      static T noRef;
-      return noRef;
-    }
   };
 
 
@@ -124,7 +127,24 @@ public:
   void Delete(Ipv4Address addr) {
     m_table.erase(addr);
   }
+  // default value is empty
+  static RoutingTable defaultVal = RoutingTable();
 
+  decltype(auto) begin() {
+    return m_table.begin();
+  }
+
+  decltype(auto) end() {
+    return m_table.end();
+  }
+
+  decltype(auto) cbegin() const {
+    return m_table.cbegin();
+  }
+
+  decltype(auto) cend() const {
+    return m_table.cend();
+  }
 private:
   std::map<Ipv4Address, RoutingTableEntry> m_table;
 };

@@ -7,14 +7,21 @@
 #     conf.check_nonfatal(header_name='stdint.h', define_name='HAVE_STDINT_H')
 
 def build(bld):
-    module = bld.create_ns3_module('ant-routing', ['internet',])
+    module = bld.create_ns3_module('ant-routing', ['internet','core'])
     module.includes = '.'
     module.cxxflags = ['-std=c++11','-std=c++14']
     module.source = [
         'model/ant-routing.cc',
         'model/ant-routing-table.cc',
-        'model/pheromone-routing-table-entry.cc',
-        'helper/ant-routing-helper.cc',
+        # 'model/pheromone-routing-table-entry.cc',
+        # 'model/ant-packet.cc',
+        # 'model/ant.cc',
+        # 'model/backward-ant.cc',
+        # 'model/forward-ant.cc',
+        # 'model/reactive-ant.cc',
+        # 'model/proactive-ant.cc',
+        # 'model/repair-ant.cc',
+        # 'helper/ant-routing-helper.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('ant-routing')
@@ -29,8 +36,15 @@ def build(bld):
     headers.source = [
         'model/ant-routing.h',
         'model/ant-routing-table.h',
-        'model/pheromone-routing-table-entry.h',
-        'helper/ant-routing-helper.h',
+        # 'model/pheromone-routing-table-entry.h',
+        # 'model/ant-packet.h',
+        # 'model/ant.h',
+        # 'model/backward-ant.h',
+        # 'model/forward-ant.h',
+        # 'model/reactive-ant.h',
+        # 'model/proactive-ant.h',
+        # 'model/repair-ant.h',
+        # 'helper/ant-routing-helper.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:

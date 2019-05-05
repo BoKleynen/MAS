@@ -1,8 +1,9 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
-#define REPAIR_ANT_H
-#ifndef REPAIR_ANT_H
 
-#include "forward-ant.h"
+#ifndef BACKWARD_ANT_H
+#define BACKWARD_ANT_H
+
+#include "ant.h"
 
 namespace ns3 {
 namespace ant_routing {
@@ -10,12 +11,18 @@ namespace ant_routing {
 class AnthocNetRouting;
 
 
-class RepairAnt : public ForwardAnt {
+/**
+ * Class of Backward ants.
+ */
+class BackwardAnt : public Ant {
 public:
+  /**
+   * Hook us up to the metaprogramming system
+   */
   static TypeId GetTypeId();
 
-  RepairAnt() = default;
-  virtual ~RepairAnt() = default;
+  virtual BackwardAnt() = default;
+  virtual ~BackwardAnt() = default;
 
   /**
    * Each ant has a specific role to perform when it visits the node
@@ -25,14 +32,11 @@ public:
 
   /**
    * Ant decides what to do next (may cause a broadcast, may launch
-   * a backwards ant etc...).
+   * a Backward ant etc...).
    */
   virtual void Route(Ptr<AnthocnetRouting> router) override;
-protected:
-  virtual Ptr<RepairAnt> ConstructPtr() const override;
-
 };
 
 } // namespace ant_routing
 } // namespace ns3
-#endif // REPAIR_ANT_H
+#endif // BACKWARD_ANT_H

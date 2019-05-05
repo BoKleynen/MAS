@@ -17,7 +17,7 @@ enum AntType
   ProactiveForwardAnt = 1,
   ProactiveBroadcastAnt = 2,
   BackwardAnt = 3,
-  RouteRepairAnt = 4;
+  RouteRepairAnt = 4
 };
 
 /**
@@ -43,22 +43,52 @@ enum AntType
 class AntHeader : public Header
 {
 public:
-  AntHeader (AntType antType = AntType.ReactiveForwardAnt, uint8_t hopCount = 0,
-            uint8_t broadcastCount = 0, uint8_t backwardCount = 0,
-            uint32_t m_generation = 0, Ipv4Address dst = Ipv4Address (),
-            Ipv4Address m_origin = Ipv4Address (), Time timeEstimate = Time ());
+  // full fledged constructor
+  AntHeader (std::vector<Ipv4Address> visitedNodes, AntType antType,
+            uint8_t hopCount, uint8_t broadcastCount,
+            uint8_t m_backwardCount, uint32_t generation,
+            Ipv4Address dst, Ipv4Address origin,
+            Time timeEstimate);
 
-  AntHeader (AntType m_antType = AntType.ReactiveForwardAnt,uint8_t m_hopCount = 0,
-            uint8_t m_broadcastCount = 0, uint8_t m_backwardCount = 0,
-            uint32_t m_generation = 0, Ipv4Address dst = Ipv4Address (),
-            Ipv4Address m_origin = Ipv4Address (), Time timeEstimate = Time (),
-            std::vector<Ipv4Address> visitedNodes);
+  AntHeader(); // default constructor
+
+  AntHeader(const AntHeader& ah) = default;
+  AntHeader(AntHeader&& ah) = default;
+
+  AntHeader& operator=(const AntHeader& ah) = default;
+  AntHeader& operator=(AntHeader&& ah) = default;
+
 
   static TypeId GetTypeId ();
+  TypeId GetInstanceTypeId () const;
   uint32_t GetSerializedSize () const;
   void Serialize (Buffer::Iterator start) const;
   uint32_t Deserialize (Buffer::Iterator start);
   void Print (std::ostream &os) const;
+
+  AntType GetAntType();
+  uint8_t GetHopCount();
+  uint8_t GetBroadcastCount();
+  uint8_t GetBackwardCount();
+  uint32_t GetGeneration();
+  Ipv4Address GetOrigin();
+  Ipv4Address GetDestination();
+  Time GetTimeEstimate();
+  std::vector<Ipv4Address> GetVisitedNodes();
+
+  void SetAntType(AntType antType);
+  void SetHopCount(uint8_t hopCount);
+  void SetBroadcastCount(uint8_t broadcastCount);
+  void SetBackwardCount(uint8_t backwardCount);
+  void SetGeneration(uint32_t generation);
+  void SetOrigin(Ipv4Address origin);
+  void SetDestination(Ipv4Address dest);
+  void SetTimeEstimate(Time timeEstimate);
+  void SetVisitedNodes(const std::vector<Ipv4Address>& visited);
+  void SetVisitedNodes(std::vector<Ipv4Address>&& visited);
+
+  void AddVisitedNode(Ipv4Address addr);
+
 private:
   AntType                   m_antType;
   uint8_t                   m_hopCount;

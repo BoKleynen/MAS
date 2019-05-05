@@ -71,9 +71,17 @@ public:
 private:
 
   struct Pheromone{
-    void update(double extraPheromone);
-    double value();
+    Pheromone();
+    void Update(double extraPheromone);
+    double Value();
+
+    // allows for implicit typecasts
+    operator double() const {
+      retun m_value;
+    }
+
     double m_value;
+
     static double s_gamma;
     static Pheromone defaultVal;
   }

@@ -12,8 +12,8 @@ def build(bld):
     module.cxxflags = ['-std=c++11','-std=c++14']
     module.source = [
         'model/ant-routing.cc',
-        # 'model/ant-routing-table.cc',
-        # 'model/pheromone-routing-table-entry.cc',
+        'model/ant-routing-table.cc',
+        'model/pheromone-table.cc',
         'model/ant-packet.cc',
         # 'model/ant.cc',
         # 'model/backward-ant.cc',
@@ -27,7 +27,7 @@ def build(bld):
     module_test = bld.create_ns3_module_test_library('ant-routing')
     module_test.source = [
         'test/ant-routing-test-suite.cc',
-        #'test/routing-table-test-suite.cc',
+        'test/routing-table-test-suite.cc',
         ]
 
     headers = bld(features='ns3header')
@@ -35,8 +35,8 @@ def build(bld):
     headers.cxxflags = ['-std=c++11','-std=c++14']
     headers.source = [
         'model/ant-routing.h',
-        # 'model/ant-routing-table.h',
-        # 'model/pheromone-routing-table-entry.h',
+        'model/ant-routing-table.h',
+        'model/pheromone-table.h',
         'model/ant-packet.h',
         # 'model/ant.h',
         # 'model/backward-ant.h',

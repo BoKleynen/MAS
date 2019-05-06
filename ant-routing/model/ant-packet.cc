@@ -68,6 +68,7 @@ AntHeader::Serialize (Buffer::Iterator i) const
   i.WriteU8 (m_broadcastCount);
   i.WriteU8 (m_backwardCount);
   i.WriteHtonU32 (m_generation);
+  // https://www.nsnam.org/doxygen/lte-rlc-tag_8cc_source.html#l00066
   auto nanoTime = m_timeEstimate.GetNanoSeconds();
   i.Write((const uint8_t *) &(nanoTime), sizeof(uint64_t));
   WriteTo(i, m_origin);

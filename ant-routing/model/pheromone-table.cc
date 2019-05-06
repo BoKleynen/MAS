@@ -1,5 +1,5 @@
 #include "pheromone-table.h"
-
+#include <cmath>
 
 namespace ns3 {
 namespace ant_routing {
@@ -10,22 +10,22 @@ double PheromoneTable::s_betaPacket = 1; // beta for exponentation of packet rou
 double PheromoneTable::s_betaAnt = 1; // beta for exponentiation of ant routing
 
 // Pheromone definition---------------------------------------------------------
-PheromoneTable::Pheromone::s_gamma = 0.7
-PheromoneTable::Pheromone::defaultVal = Pheromone();
+double PheromoneTable::Pheromone::s_gamma = 0.7;
+PheromoneTable::Pheromone PheromoneTable::Pheromone::defaultVal = Pheromone();
 
-PheromoneTable::Pheromone() : m_value(0) {}
+PheromoneTable::Pheromone::Pheromone() : m_value(0) {}
 
-PheromoneTable::Pheromone::Value() {
+double PheromoneTable::Pheromone::Value() {
   return m_value;
 }
 
-void PheromoneTable::PheromoneTable::Update(double extraPheromone) {
+void PheromoneTable::Pheromone::Update(double extraPheromone) {
   m_value = s_gamma*m_value + (1-s_gamma)*extraPheromone;
 }
 
 // Pheromone table definition --------------------------------------------------
-Ptr<Ipv4Route> PheromoneTable::RouteTo(Ptr<Ipv4Header> ipv4h) {
-  return RouteTo(ipv4h->GetSource(), ipv4h->getDestination(), s_betaPacket);
+Ptr<Ipv4Route> PheromoneTable::PacketRouteTo(Ptr<Ipv4Header> ipv4h) {
+  return RouteTo(ipv4h->GetSource(), ipv4h->GetDestination(), s_betaPacket);
 }
 
 /**
@@ -47,7 +47,11 @@ void PheromoneTable::UpdateEntry(Ipv4Address dest, Ipv4Address nextHop, Time tra
  * for a given destination.
  */
 std::vector<Ptr<Ipv4Route>> PheromoneTable::GetNoPheromoneRoutes(Ipv4Address dest) {
+  return std::vector<Ptr<Ipv4Route>> ();
+}
 
+std::vector<Ptr<Ipv4Route>> PheromoneTable::Broadcast(Ipv4Address dest) {
+  return std::vector<Ptr<Ipv4Route>> ();
 }
 
 /**
@@ -69,7 +73,7 @@ void PheromoneTable::SetGamma(double gamma) {
   Pheromone::s_gamma = gamma;
 }
 
-void PheromoneTable::SetHopTime(double hopTime){
+void PheromoneTable::SetHopTime(Time hopTime){
   s_hopTime = hopTime;
 }
 
@@ -85,16 +89,16 @@ Ptr<Ipv4Route> PheromoneTable::RouteTo(Ipv4Address source, Ipv4Address dest, dou
   // we first select a random value and then route the packet as soon as
   // the random value is smaller than the cumulative value
   double randVal = getRand();
-  double totalPm = GetWeigthedTotalPheromoneFor(dest, beta);
+  double totalPm = GetWeightedTotalPheromoneFor(dest, beta);
   double cumulativePmPercent = 0;
   // iterate until we reach the final neighbor
   for (auto nbIter = m_table.cbegin(); nbIter != m_table.cend(); nbIter++) {
-    auto neighbor = nbIter.
-    double pm = GetPheromoneFor(nbIter->first);
+    auto neighbor = nbIter->first;
+    double pm = GetPheromoneFor(nbIter->first, dest);
     cumulativePmPercent += pm/totalPm;
 
     if(cumulativePmPercent < randVal) {
-      return CreateRouteFor(source, dest, neighbor)
+      return CreateRouteFor(source, dest, neighbor);
     }
   }
 
@@ -102,7 +106,7 @@ Ptr<Ipv4Route> PheromoneTable::RouteTo(Ipv4Address source, Ipv4Address dest, dou
   return CreateRouteFor(source, dest, m_table.cbegin()-> first);
 }
 
-double PheromoneTable::getWeigthedTotalPheromoneFor(Ipv4Address dest, double beta) {
+double PheromoneTable::GetWeightedTotalPheromoneFor(Ipv4Address dest, double beta) {
   double total = 0;
 
   for (auto iter = m_table.cbegin(); iter != m_table.cend(); iter++) {
@@ -115,20 +119,22 @@ double PheromoneTable::getWeigthedTotalPheromoneFor(Ipv4Address dest, double bet
 }
 
 
-double PheromoneTable::GetPheromoneFor(Ipv4Address neighborAddr; Ipv4Address dest) {
+double PheromoneTable::GetPheromoneFor(Ipv4Address neighborAddr, Ipv4Address dest) {
   // force the default value in case there is no entry for either neigbour
   // or the destination. Will still give valid results since a default
   // table is empty and a default value for an absent pheromone is zero.
-  auto neighbourTable = m_table.Lookup(neighborAddr).Value();
-  return neighbourTable.Lookup(dest).Value();
+  auto neighbourTable = m_table.Lookup(neighborAddr).GetValue();
+  return neighbourTable.Lookup(dest).GetValue();
 }
 
 Ptr<Ipv4Route> PheromoneTable::CreateRouteFor(Ipv4Address source, Ipv4Address dest, Ipv4Address neighbor) {
   auto route = Create<Ipv4Route>();
-  route->SetDesination(dest);
+  route->SetDestination(dest);
   route->SetGateway(neighbor);
   route->SetSource(source);
-  route->SetDevice(m_device);
+  route->SetOutputDevice(m_device);
+
+  return route;
 }
 
 

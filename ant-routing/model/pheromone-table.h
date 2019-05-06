@@ -4,6 +4,8 @@
 //TODO make headers more fine grained
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h"
+#include "ant-routing-table.h"
+#include "ant-packet.h"
 
 namespace ns3 {
 namespace ant_routing {
@@ -11,7 +13,7 @@ namespace ant_routing {
 class PheromoneTable {
 public:
 
-  Ptr<Ipv4Route> RouteTo(Ipv4Address dest);
+  Ptr<Ipv4Route> PacketRouteTo(Ptr<Ipv4Header> dest);
 
   /**
    * Updates the entry based on the information gathered by the ant
@@ -30,7 +32,7 @@ public:
    * Returns the next hop for an ant in case unicast is desired
    * (ants may feel more adventurous)
    */
-  Ptr<Ipv4Route> AntRouteTo(Ipv4Address dest);
+  Ptr<Ipv4Route> AntRouteTo(Ptr<AntHeader> ah);
 
 
   /**
@@ -43,14 +45,12 @@ public:
   /**
    * contains all routes to known destinations
    */
-  std::vector<Ipv4Routes> Broadcast(Ipv4Address dest){
-
-  }
+  std::vector<Ptr<Ipv4Route>> Broadcast(Ipv4Address dest);
 
   /**
    * Set the device on which the route must be output
    */
-  void setNetDevice(Ptr<NetDevice> device);
+  void SetNetDevice(Ptr<NetDevice> device);
 
   /**
    * setters for parameters used throughout the algorithm
@@ -59,7 +59,7 @@ public:
   static void SetGamma(double gamma);
   // hopTime: used to determine the pheromone value of a single
   // forward ant
-  static void SetHopTime(double hopTime);
+  static void SetHopTime(Time hopTime);
 
   // beta value: used in calculating the route for an ant
   // regulates the explorativity of an ant
@@ -77,14 +77,14 @@ private:
 
     // allows for implicit typecasts
     operator double() const {
-      retun m_value;
+      return m_value;
     }
 
     double m_value;
 
     static double s_gamma;
     static Pheromone defaultVal;
-  }
+  };
 
   // random number generation for routing etc
   static double getRand() {
@@ -102,12 +102,12 @@ private:
    * Returns the weighted sum for the given destination for all
    * neighbours. Beta is used to exponentiate the pheromone value
    */
-  double GetWeigthedTotalPheromoneFor(Ipv4Address dest, double beta);
+  double GetWeightedTotalPheromoneFor(Ipv4Address dest, double beta);
 
   /**
    * Get the pheromone for a neigbor for a certain destination
    */
-  double GetPheromoneFor(Ipv4Address neighborAddr; Ipv4Address dest);
+  double GetPheromoneFor(Ipv4Address neighborAddr, Ipv4Address dest);
 
   /**
    * Creates an Ipv4Route to the given destination with as intermediary

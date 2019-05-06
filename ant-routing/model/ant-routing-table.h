@@ -47,8 +47,8 @@ namespace ns3 {
      * returns the value inside the reference, in case the reference
      * is invalid, returns the default value.
      */
-    const T& getValue(){
-      return ref;
+    const T& Value(){
+      return m_ref;
     }
 
     /**
@@ -88,6 +88,9 @@ template<typename RoutingTableEntry>
 class RoutingTable {
 public:
   using OptEntry = Optional<RoutingTableEntry>;
+
+  RoutingTable() : m_table(std::map<Ipv4Address, RoutingTableEntry>()) {}
+
   /**
    * insert a new element in the routing table, in case
    * the entry was already present, the old one is replaced
@@ -128,26 +131,32 @@ public:
     m_table.erase(addr);
   }
   // default value is empty
-  static RoutingTable defaultVal = RoutingTable();
+  static RoutingTable defaultVal;// = RoutingTable<RoutingTableEntry>();
 
-  decltype(auto) begin() {
+
+private:
+  std::map<Ipv4Address, RoutingTableEntry> m_table;
+  // m_table must be declared before we can use it in decltype
+public:
+  auto begin() -> decltype(m_table.begin()){
     return m_table.begin();
   }
 
-  decltype(auto) end() {
+  auto end() -> decltype(m_table.end()) {
     return m_table.end();
   }
 
-  decltype(auto) cbegin() const {
+  auto cbegin() -> decltype(m_table.cbegin()) const {
     return m_table.cbegin();
   }
 
-  decltype(auto) cend() const {
+  auto cend() -> decltype(m_table.cend()) const {
     return m_table.cend();
   }
-private:
-  std::map<Ipv4Address, RoutingTableEntry> m_table;
 };
+
+template<typename RoutingTableEntry>
+RoutingTable<RoutingTableEntry> RoutingTable<RoutingTableEntry>::defaultVal = RoutingTable<RoutingTableEntry>();
 
 } // namespace ant_routing
 } // namespace ns3

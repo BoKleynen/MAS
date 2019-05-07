@@ -99,7 +99,52 @@ private:
   Ipv4Address               m_dst;
   Time                      m_timeEstimate;
   std::vector<Ipv4Address>  m_visitedNodes;
-}; // class ReactiveForwardAnt
+}; // class AntHeader
+
+class HelloHeader {
+public:
+  HelloHeader ();
+
+  static TypeId GetTypeId ();
+  TypeId GetInstanceTypeId () const;
+  uint32_t GetSerializedSize () const;
+  void Serialize (Buffer::Iterator start) const;
+  uint32_t Deserialize (Buffer::Iterator start);
+  void Print (std::ostream &os) const;
+private:
+
+}; // class HelloHeader
+
+class LinkFailureNotification {
+  struct Message
+  {
+    Ipv4Address dest;
+    Time        bestTimeEstimate;
+    uint8_t     bestHopEstimate;
+
+    static uint32_t GetSerializedSize (void);
+    void Serialize (Buffer::Iterator start) const;
+    uint32_t Deserialize (Buffer::Iterator start);
+  };
+public:
+  LinkFailureNotification ();
+  LinkFailureNotification (Ipv4Address origin);
+  LinkFailureNotification (Ipv4Address origin, std::vector<Message> messages);
+
+  static TypeId GetTypeId ();
+  TypeId GetInstanceTypeId () const;
+  uint32_t GetSerializedSize () const;
+  void Serialize (Buffer::Iterator start) const;
+  uint32_t Deserialize (Buffer::Iterator start);
+  void Print (std::ostream &os) const;
+
+private:
+  Ipv4Address m_origin;
+  std::vector<Message> m_messages;
+
+}; // LinkFailureNotification
+
+
 } // namespace ant_routing
 } // namespace
 #endif /* ANTPACKET_H */

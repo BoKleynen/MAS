@@ -2,6 +2,8 @@
 #include "ant-packet.h"
 #include "ns3/address-utils.h"
 
+#define IPV4_ADDRESS_SIZE 4
+
 namespace ns3 {
 namespace ant_routing {
 
@@ -57,7 +59,7 @@ AntHeader::GetSerializedSize () const
     + 3*sizeof(uint8_t)
     + sizeof(uint32_t)
     + sizeof(Time)
-    + (1 + m_hopCount) * sizeof(Ipv4Address);  // (2 + (m_hopCount - 1))
+    + (1 + m_hopCount) * IPV4_ADDRESS_SIZE;  // (2 + (m_hopCount - 1))
 }
 
 void
@@ -81,7 +83,7 @@ AntHeader::Serialize (Buffer::Iterator i) const
 uint32_t
 AntHeader::Deserialize (Buffer::Iterator start)
 {
-  Buffer::Iterator i = start;
+  auto i = start;
   m_antType = static_cast<AntType>(i.ReadU8 ());
   m_hopCount = i.ReadU8 ();
   m_broadcastCount = i.ReadU8 ();
@@ -170,6 +172,104 @@ void AntHeader::SetVisitedNodes(std::vector<Ipv4Address>&& visited) {
 
 void AntHeader::AddVisitedNode(Ipv4Address addr) {
   m_visitedNodes.push_back(addr);
+}
+
+// --------------- LinkFailureNotification ---------------
+
+LinkFailureNotification::LinkFailureNotification ()
+  : m_origin (Ipv4Address ()),
+    m_messages (std::vector<Message> ()) {}
+
+LinkFailureNotification::LinkFailureNotification (Ipv4Address origin)
+  : m_origin (origin),
+    m_messages (std::vector<Message> ()) {}
+
+LinkFailureNotification::LinkFailureNotification (Ipv4Address origin, std::vector<Message> messages)
+  : m_origin (origin),
+    m_messages (messages) {}
+
+TypeId
+LinkFailureNotification::GetTypeId ()
+{
+  static TypeId tid = TypeId ("ns3::ant_routing::LinkFailureNotification")
+    .SetParent<Header> ()
+    .SetGroupName ("AntRouting")
+    .AddConstructor<LinkFailureNotification> ();
+  return tid;
+}
+
+TypeId
+LinkFailureNotification::GetInstanceTypeId () const
+{
+  return GetTypeId ();
+}
+
+uint32_t
+LinkFailureNotification::GetSerializedSize () const
+{
+  return IPV4_ADDRESS_SIZE + m_messages.size() * 13;
+}
+
+void
+LinkFailureNotification::Serialize (Buffer::Iterator i) const
+{
+  WriteTo(i, m_origin);
+  i.WriteU8 (m_messages.size());
+  for (auto iter = m_messages.begin (); iter != m_messages.end (); iter++)
+  {
+    iter->Serialize (i);
+  }
+}
+
+uint32_t
+LinkFailureNotification::Deserialize (Buffer::Iterator start)
+{
+  auto i = start;
+  ReadFrom(i, m_origin);
+  auto n_messages = i.ReadU8 ();
+  for (int n = 1; n < n_messages; n++) {
+    auto message = Message ();
+    message.Deserialize (i);
+    m_messages.push_back(message);
+  }
+
+  uint32_t dist = i.GetDistanceFrom (start);
+  return dist;
+}
+
+void
+LinkFailureNotification::Print (std::ostream &os) const
+{
+  os << "bla bla bla";
+}
+
+uint32_t
+LinkFailureNotification::Message::GetSerializedSize ()
+{
+  return IPV4_ADDRESS_SIZE + 8 + 1;
+}
+
+void
+LinkFailureNotification::Message::Serialize (Buffer::Iterator i) const
+{
+  WriteTo (i, dest);
+  auto nanoTime = bestTimeEstimate.GetNanoSeconds ();
+  i.Write ((const uint8_t *) &(nanoTime), sizeof(uint64_t));
+  i.WriteU8 (bestHopEstimate);
+}
+
+uint32_t
+LinkFailureNotification::Message::Deserialize (Buffer::Iterator start)
+{
+  auto i = start;
+  ReadFrom (i, dest);
+  int64_t rcvdTime;
+  i.Read ((uint8_t *)&rcvdTime, 8);
+  bestTimeEstimate = NanoSeconds (rcvdTime);
+  bestHopEstimate = i.ReadU8 ();
+
+  uint32_t dist = i.GetDistanceFrom (start);
+  return dist;
 }
 
 } // namespace ant_routing

@@ -9,6 +9,11 @@
 #include "ns3/core-module.h"
 
 namespace ns3 {
+
+
+  template<typename T>
+  class TD;
+
   /**
    * Named requirements for optionals
    * static member: defaultVal
@@ -47,7 +52,7 @@ namespace ns3 {
      * returns the value inside the reference, in case the reference
      * is invalid, returns the default value.
      */
-    const T& Value(){
+    const T& Value() {
       return m_ref;
     }
 
@@ -57,11 +62,13 @@ namespace ns3 {
      */
     template<typename Method, typename ...Args>
     bool doOptional(Method method, Args&& ...args) {
+      TD<Method>();
       if (ok()) {
         (ref().*method)(std::forward<Args>(args)...);
       }
       return ok();
     }
+
 
   private:
     T& m_ref;
@@ -95,12 +102,14 @@ public:
    * insert a new element in the routing table, in case
    * the entry was already present, the old one is replaced
    */
-  void Insert(Ipv4Address addr, RoutingTableEntry&& entry) {
+  RoutingTableEntry& Insert(Ipv4Address addr, RoutingTableEntry&& entry) {
     m_table[addr] = std::move(entry);
+    return m_table[addr];
   }
 
-  void Insert(Ipv4Address addr, const RoutingTableEntry& entry) {
+  RoutingTableEntry& Insert(Ipv4Address addr, const RoutingTableEntry& entry) {
     m_table[addr] = entry;
+    return m_table[addr];
   }
 
   OptEntry Lookup(Ipv4Address addr) {
@@ -115,21 +124,29 @@ public:
     return m_table.find(addr) != m_table.end();
   }
 
-  /**
-   * Updates an entry in the routing table using the
-   * Update(Args...) function defined by RoutingTableEntry,
-   */
-  template<typename... Args>
-  bool Update(Ipv4Address addr, Args&& ...args) {
-
-    auto entry = Lookup(addr);
-
-    return entry.doOptional(&RoutingTableEntry::Update, std::forward<Args>(args)...);
-  }
+  // /**
+  //  * Updates an entry in the routing table using the
+  //  * Update(Args...) function defined by RoutingTableEntry,
+  //  */
+  // template<typename... Args>
+  // void Update(Ipv4Address addr, Args&& ...args) {
+  //   OptEntry entry = Lookup(addr);
+  //   entry.doOptional(&RoutingTableEntry::Update, std::forward<Args>(args)...);
+  // }
 
   void Delete(Ipv4Address addr) {
     m_table.erase(addr);
   }
+
+  std::vector<Ipv4Address> GetKeys() {
+    std::vector<Ipv4Address> keys;
+    for(auto iter = m_table.begin(); iter != m_table.end(); iter++) {
+      keys.push_back(iter->first);
+    }
+
+    return keys;
+  }
+
   // default value is empty
   static RoutingTable defaultVal;// = RoutingTable<RoutingTableEntry>();
 

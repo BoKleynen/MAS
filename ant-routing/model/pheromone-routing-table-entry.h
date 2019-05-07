@@ -4,7 +4,6 @@
 
 #include <map>
 #include "ns3/Ipv4Address.h"
-#include ""
 
 namespace ns3 {
 namespace ant_routing {

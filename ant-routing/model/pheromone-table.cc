@@ -10,16 +10,16 @@ double PheromoneTable::s_betaPacket = 1; // beta for exponentation of packet rou
 double PheromoneTable::s_betaAnt = 1; // beta for exponentiation of ant routing
 
 // Pheromone definition---------------------------------------------------------
-double PheromoneTable::Pheromone::s_gamma = 0.7;
-PheromoneTable::Pheromone PheromoneTable::Pheromone::defaultVal = Pheromone();
+double PheromoneTable::PheromoneInfo::s_gamma = 0.7;
+PheromoneTable::PheromoneInfo PheromoneTable::PheromoneInfo::defaultVal = PheromoneInfo();
 
-PheromoneTable::Pheromone::Pheromone() : m_value(0) {}
+PheromoneTable::PheromoneInfo::PheromoneInfo() : m_value(0) {}
 
-double PheromoneTable::Pheromone::Value() {
+double PheromoneTable::PheromoneInfo::Value() {
   return m_value;
 }
 
-void PheromoneTable::Pheromone::Update(double extraPheromone) {
+void PheromoneTable::PheromoneInfo::Update(double extraPheromone) {
   m_value = s_gamma*m_value + (1-s_gamma)*extraPheromone;
 }
 
@@ -37,8 +37,29 @@ Ptr<Ipv4Route> PheromoneTable::PacketRouteTo(Ptr<Ipv4Header> ipv4h) {
  * param hops: the number of hops taken from this node to the destination node
  * //TODO check if routing table entries can dissapear between receival
  *        of the ant and table update
+ * returns false in case there is no entry for the next hop... should have added neighbour
  */
-void PheromoneTable::UpdateEntry(Ipv4Address dest, Ipv4Address nextHop, Time travelTime, int32_t hops) {
+bool PheromoneTable::UpdateEntry(Ipv4Address nextHop, Ipv4Address dest, Time travelTime, int32_t hops) {
+  double extraPheromone = 0.5*(travelTime.GetSeconds() + hops*s_hopTime.GetSeconds());
+  auto nbTableOpt = m_table.Lookup(nextHop);
+
+  if(!nbTableOpt.ok()) {
+    return false;
+  }
+
+  auto neighborTable = nbTableOpt.ref();
+  auto EntryOpt = neighborTable.Lookup(dest);
+
+  // case there isn't yet an entry. Do add one
+  if(!EntryOpt.ok()) {
+    auto Entry = neighborTable.Insert(dest, PheromoneInfo());
+    Entry.Update(extraPheromone);
+  }else {
+    auto Entry = EntryOpt.ref();
+    Entry.Update(extraPheromone);
+  }
+
+  return true;
 
 }
 
@@ -50,8 +71,14 @@ std::vector<Ptr<Ipv4Route>> PheromoneTable::GetNoPheromoneRoutes(Ipv4Address des
   return std::vector<Ptr<Ipv4Route>> ();
 }
 
-std::vector<Ptr<Ipv4Route>> PheromoneTable::Broadcast(Ipv4Address dest) {
-  return std::vector<Ptr<Ipv4Route>> ();
+std::vector<Ptr<Ipv4Route>> PheromoneTable::BroadcastAnt(Ptr<AntHeader> ah) {
+  std::vector<Ipv4Address> nbAddrs = GetNeighborAddrs();
+  std::vector<Ptr<Ipv4Route>> routes;
+  for(auto iter  = nbAddrs.begin(); iter != nbAddrs.end(); iter++) {
+    routes.push_back(CreateRouteFor(ah->GetOrigin(), ah->GetDestination(), *iter));
+  }
+
+  return routes;
 }
 
 /**
@@ -70,7 +97,7 @@ void PheromoneTable::SetNetDevice(Ptr<NetDevice> device) {
 }
 
 void PheromoneTable::SetGamma(double gamma) {
-  Pheromone::s_gamma = gamma;
+  PheromoneInfo::s_gamma = gamma;
 }
 
 void PheromoneTable::SetHopTime(Time hopTime){
@@ -92,7 +119,7 @@ Ptr<Ipv4Route> PheromoneTable::RouteTo(Ipv4Address source, Ipv4Address dest, dou
   double totalPm = GetWeightedTotalPheromoneFor(dest, beta);
   double cumulativePmPercent = 0;
   // iterate until we reach the final neighbor
-  for (auto nbIter = m_table.cbegin(); nbIter != m_table.cend(); nbIter++) {
+  for (auto nbIter = m_table.begin(); nbIter != m_table.end(); nbIter++) {
     auto neighbor = nbIter->first;
     double pm = GetPheromoneFor(nbIter->first, dest);
     cumulativePmPercent += pm/totalPm;
@@ -103,13 +130,13 @@ Ptr<Ipv4Route> PheromoneTable::RouteTo(Ipv4Address source, Ipv4Address dest, dou
   }
 
   // failsafe case.
-  return CreateRouteFor(source, dest, m_table.cbegin()-> first);
+  return CreateRouteFor(source, dest, m_table.begin()-> first);
 }
 
 double PheromoneTable::GetWeightedTotalPheromoneFor(Ipv4Address dest, double beta) {
   double total = 0;
 
-  for (auto iter = m_table.cbegin(); iter != m_table.cend(); iter++) {
+  for (auto iter = m_table.begin(); iter != m_table.end(); iter++) {
     auto neighborAddress = iter->first;
     double neighborPheromone = GetPheromoneFor(neighborAddress, dest);
     total = pow(neighborPheromone, beta);
@@ -118,13 +145,18 @@ double PheromoneTable::GetWeightedTotalPheromoneFor(Ipv4Address dest, double bet
   return total;
 }
 
+std::vector<Ipv4Address> PheromoneTable::GetNeighborAddrs() {
+  return m_table.GetKeys();
+}
+
+
 
 double PheromoneTable::GetPheromoneFor(Ipv4Address neighborAddr, Ipv4Address dest) {
   // force the default value in case there is no entry for either neigbour
   // or the destination. Will still give valid results since a default
   // table is empty and a default value for an absent pheromone is zero.
-  auto neighbourTable = m_table.Lookup(neighborAddr).GetValue();
-  return neighbourTable.Lookup(dest).GetValue();
+  auto neighbourTable = m_table.Lookup(neighborAddr).Value();
+  return neighbourTable.Lookup(dest).Value();
 }
 
 Ptr<Ipv4Route> PheromoneTable::CreateRouteFor(Ipv4Address source, Ipv4Address dest, Ipv4Address neighbor) {

@@ -25,7 +25,7 @@ public:
    * //TODO check if routing table entries can dissapear between receival
    *        of the ant and table update
    */
-  void UpdateEntry(Ipv4Address dest, Ipv4Address nextHop, Time travelTime, int32_t hops);
+  bool UpdateEntry(Ipv4Address dest, Ipv4Address nextHop, Time travelTime, int32_t hops);
 
 
   /**
@@ -45,7 +45,7 @@ public:
   /**
    * contains all routes to known destinations
    */
-  std::vector<Ptr<Ipv4Route>> Broadcast(Ipv4Address dest);
+  std::vector<Ptr<Ipv4Route>> BroadcastAnt(Ptr<AntHeader> ah);
 
   /**
    * Set the device on which the route must be output
@@ -70,8 +70,8 @@ public:
   static void SetBetaPacket(double betaPacket);
 private:
 
-  struct Pheromone{
-    Pheromone();
+  struct PheromoneInfo{
+    PheromoneInfo();
     void Update(double extraPheromone);
     double Value();
 
@@ -83,7 +83,7 @@ private:
     double m_value;
 
     static double s_gamma;
-    static Pheromone defaultVal;
+    static PheromoneInfo defaultVal;
   };
 
   // random number generation for routing etc
@@ -97,6 +97,8 @@ private:
    * the beta determines the 'explorativity'
    */
   Ptr<Ipv4Route> RouteTo(Ipv4Address source, Ipv4Address dest, double beta);
+
+  std::vector<Ipv4Address> GetNeighborAddrs();
 
   /**
    * Returns the weighted sum for the given destination for all
@@ -117,7 +119,8 @@ private:
 
   // ip addressses, neighbor ip address, second arg the table
   // containing the pheromones for a certain destination
-  RoutingTable<RoutingTable<Pheromone>> m_table;
+  using InnerTable = RoutingTable<PheromoneInfo>;
+  RoutingTable<InnerTable> m_table;
   //TODO check if we can route the output to the same m_device
   // device to output all the routes on
   Ptr<NetDevice> m_device;

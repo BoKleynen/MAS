@@ -27,7 +27,7 @@ def build(bld):
     module_test = bld.create_ns3_module_test_library('ant-routing')
     module_test.source = [
         'test/ant-routing-test-suite.cc',
-        'test/routing-table-test-suite.cc',
+        #'test/routing-table-test-suite.cc',
         ]
 
     headers = bld(features='ns3header')

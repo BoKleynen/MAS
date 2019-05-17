@@ -243,10 +243,13 @@ LinkFailureNotification::Print (std::ostream &os) const
   os << "bla bla bla";
 }
 
+// --------------- LinkFailureNotification::Message ---------------
+
+
 uint32_t
 LinkFailureNotification::Message::GetSerializedSize ()
 {
-  return IPV4_ADDRESS_SIZE + 8 + 1;
+  return IPV4_ADDRESS_SIZE + sizeof(uint64_t) + sizeof(uint8_t);
 }
 
 void

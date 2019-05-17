@@ -115,7 +115,8 @@ private:
 
 }; // class HelloHeader
 
-class LinkFailureNotification {
+class LinkFailureNotification : public Header {
+public:
   struct Message
   {
     Ipv4Address dest;
@@ -126,7 +127,7 @@ class LinkFailureNotification {
     void Serialize (Buffer::Iterator start) const;
     uint32_t Deserialize (Buffer::Iterator start);
   };
-public:
+
   LinkFailureNotification ();
   LinkFailureNotification (Ipv4Address origin);
   LinkFailureNotification (Ipv4Address origin, std::vector<Message> messages);
@@ -138,12 +139,30 @@ public:
   uint32_t Deserialize (Buffer::Iterator start);
   void Print (std::ostream &os) const;
 
+  bool operator ==(const LinkFailureNotification& rhs)
+  {
+    return m_origin == rhs.m_origin && m_messages == rhs.m_messages;
+  }
 private:
   Ipv4Address m_origin;
   std::vector<Message> m_messages;
 
 }; // LinkFailureNotification
 
+std::ostream& operator <<(std::ostream& os, const LinkFailureNotification::Message message)
+{
+  return os << "Message { "
+            << message.dest
+            << message.bestTimeEstimate
+            << message.bestHopEstimate
+            << " }";
+}
+
+inline bool operator==(const LinkFailureNotification::Message& lhs, const LinkFailureNotification::Message& rhs) {
+  return lhs.dest == rhs.dest
+    && lhs.bestTimeEstimate == rhs.bestTimeEstimate
+    && lhs.bestHopEstimate == rhs.bestHopEstimate;
+}
 
 } // namespace ant_routing
 } // namespace

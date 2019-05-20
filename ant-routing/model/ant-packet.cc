@@ -111,28 +111,28 @@ AntHeader::Print (std::ostream &os) const
   os << "we don't do printing";
 }
 
-AntType AntHeader::GetAntType() {
+AntType AntHeader::GetAntType() const {
   return m_antType;
 }
-uint8_t AntHeader::GetHopCount() {
+uint8_t AntHeader::GetHopCount() const {
   return m_hopCount;
 }
-uint8_t AntHeader::GetBroadcastCount() {
+uint8_t AntHeader::GetBroadcastCount() const {
   return m_broadcastCount;
 }
-uint8_t AntHeader::GetBackwardCount() {
+uint8_t AntHeader::GetBackwardCount() const {
   return m_backwardCount;
 }
-uint32_t AntHeader::GetGeneration() {
+uint32_t AntHeader::GetGeneration() const {
   return m_generation;
 }
-Ipv4Address AntHeader::GetOrigin() {
+Ipv4Address AntHeader::GetOrigin() const {
   return m_origin;
 }
-Ipv4Address AntHeader::GetDestination() {
+Ipv4Address AntHeader::GetDestination() const {
   return m_dst;
 }
-Time AntHeader::GetTimeEstimate() {
+Time AntHeader::GetTimeEstimate() const {
   return m_timeEstimate;
 }
 std::vector<Ipv4Address> AntHeader::GetVisitedNodes() {
@@ -274,6 +274,16 @@ LinkFailureNotification::Message::Deserialize (Buffer::Iterator start)
   uint32_t dist = i.GetDistanceFrom (start);
   return dist;
 }
+
+
+std::ostream& operator <<(std::ostream& os, const LinkFailureNotification::Message& message) {
+return os << "Message { "
+          << message.dest
+          << message.bestTimeEstimate
+          << message.bestHopEstimate
+          << " }";
+}
+
 
 } // namespace ant_routing
 } // namespace

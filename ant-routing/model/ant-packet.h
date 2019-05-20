@@ -66,14 +66,14 @@ public:
   uint32_t Deserialize (Buffer::Iterator start);
   void Print (std::ostream &os) const;
 
-  AntType GetAntType();
-  uint8_t GetHopCount();
-  uint8_t GetBroadcastCount();
-  uint8_t GetBackwardCount();
-  uint32_t GetGeneration();
-  Ipv4Address GetOrigin();
-  Ipv4Address GetDestination();
-  Time GetTimeEstimate();
+  AntType GetAntType() const;
+  uint8_t GetHopCount() const;
+  uint8_t GetBroadcastCount() const;
+  uint8_t GetBackwardCount() const;
+  uint32_t GetGeneration() const;
+  Ipv4Address GetOrigin() const;
+  Ipv4Address GetDestination() const;
+  Time GetTimeEstimate() const;
   std::vector<Ipv4Address> GetVisitedNodes();
 
   void SetAntType(AntType antType);
@@ -149,14 +149,8 @@ private:
 
 }; // LinkFailureNotification
 
-std::ostream& operator <<(std::ostream& os, const LinkFailureNotification::Message message)
-{
-  return os << "Message { "
-            << message.dest
-            << message.bestTimeEstimate
-            << message.bestHopEstimate
-            << " }";
-}
+std::ostream& operator <<(std::ostream& os, const LinkFailureNotification::Message& message);
+
 
 inline bool operator==(const LinkFailureNotification::Message& lhs, const LinkFailureNotification::Message& rhs) {
   return lhs.dest == rhs.dest

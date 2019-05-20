@@ -1,127 +1,47 @@
 #include "pheromone-table.h"
-#include <cmath>
 
 namespace ns3 {
 namespace ant_routing {
 
-// Pheromone table statics------------------------------------------------------
-Time PheromoneTable::s_hopTime = MilliSeconds(3); // estimate for the default hop time
-double PheromoneTable::s_betaPacket = 1; // beta for exponentation of packet routing
-double PheromoneTable::s_betaAnt = 1; // beta for exponentiation of ant routing
+// static variable definition --------------------------------------------------
+double PheromoneTable::s_gamma = 0.7;
+double PheromoneTable::s_betaAnt = 1;
+double PheromoneTable::s_betaPacket = 1;
+Time PheromoneTable::s_hopTime = MilliSeconds(3);
 
-// Pheromone definition---------------------------------------------------------
-double PheromoneTable::PheromoneInfo::s_gamma = 0.7;
-PheromoneTable::PheromoneInfo PheromoneTable::PheromoneInfo::defaultVal = PheromoneInfo();
-
-PheromoneTable::PheromoneInfo::PheromoneInfo() : m_value(0) {}
-
-double PheromoneTable::PheromoneInfo::Value() {
+// PheromoneInfo definition ----------------------------------------------------
+// default constructor
+PheromoneTable::PheromoneInfo::PheromoneInfo() : m_value(0), m_hopCount(0), m_timeEstimate(Seconds(0)) { }
+// value of the pheromone
+double PheromoneTable::PheromoneInfo::Value() const {
   return m_value;
 }
-
-void PheromoneTable::PheromoneInfo::Update(double extraPheromone) {
-  m_value = s_gamma*m_value + (1-s_gamma)*extraPheromone;
+// the last hop count, used for repairing routes
+uint32_t PheromoneTable::PheromoneInfo::HopCount() const {
+  return m_hopCount;
+}
+// the last time estimate, used for repairing routes
+Time PheromoneTable::PheromoneInfo::TimeEstimate() const {
+  return m_timeEstimate;
+}
+// allows implicit conversion from pheromone info to their value
+PheromoneTable::PheromoneInfo::operator double() const {
+  return Value();
 }
 
-// Pheromone table definition --------------------------------------------------
-Ptr<Ipv4Route> PheromoneTable::PacketRouteTo(Ptr<Ipv4Header> ipv4h) {
-  return RouteTo(ipv4h->GetSource(), ipv4h->GetDestination(), s_betaPacket);
-}
+// PheromoneTable definition ---------------------------------------------------
 
-/**
- * Updates the entry based on the information gathered by the ant
- * param destination: destination of the route
- * param nextHop: the neighbour the forward ant has chosen as a next hop
- * param travelTime: estimate of how long it took to travel from the current node
- *                   to the end node
- * param hops: the number of hops taken from this node to the destination node
- * //TODO check if routing table entries can dissapear between receival
- *        of the ant and table update
- * returns false in case there is no entry for the next hop... should have added neighbour
- */
-bool PheromoneTable::UpdateEntry(Ipv4Address nextHop, Ipv4Address dest, Time travelTime, int32_t hops) {
-  double extraPheromone = 0.5*(travelTime.GetSeconds() + hops*s_hopTime.GetSeconds());
-  auto nbTableOpt = m_table.Lookup(nextHop);
-
-  if(!nbTableOpt.ok()) {
-    return false;
-  }
-
-  auto neighborTable = nbTableOpt.ref();
-  auto EntryOpt = neighborTable.Lookup(dest);
-
-  // case there isn't yet an entry. Do add one
-  if(!EntryOpt.ok()) {
-    auto Entry = neighborTable.Insert(dest, PheromoneInfo());
-    Entry.Update(extraPheromone);
-  }else {
-    auto Entry = EntryOpt.ref();
-    Entry.Update(extraPheromone);
-  }
-
-  return true;
-
-}
-
-/**
- * Returns all the routes to neighbours that do not have a pheromone entry
- * for a given destination.
- */
-std::vector<Ptr<Ipv4Route>> PheromoneTable::GetNoPheromoneRoutes(Ipv4Address dest) {
-  return std::vector<Ptr<Ipv4Route>> ();
-}
-
-std::vector<Ptr<Ipv4Route>> PheromoneTable::BroadcastAnt(Ptr<AntHeader> ah) {
-  std::vector<Ipv4Address> nbAddrs = GetNeighborAddrs();
-  std::vector<Ptr<Ipv4Route>> routes;
-  for(auto iter  = nbAddrs.begin(); iter != nbAddrs.end(); iter++) {
-    routes.push_back(CreateRouteFor(ah->GetOrigin(), ah->GetDestination(), *iter));
-  }
-
-  return routes;
-}
-
-/**
- * Returns the next hop for an ant in case unicast is desired
- * (ants may feel more adventurous)
- */
-Ptr<Ipv4Route> PheromoneTable::AntRouteTo(Ptr<AntHeader> ah) {
-  return RouteTo(ah->GetOrigin(), ah->GetDestination(), s_betaAnt);
-}
-
-/**
- * set the Ipv4 stack of the table where the protocol is associated with.
- */
-void PheromoneTable::SetNetDevice(Ptr<NetDevice> device) {
-  m_device = device;
-}
-
-void PheromoneTable::SetGamma(double gamma) {
-  PheromoneInfo::s_gamma = gamma;
-}
-
-void PheromoneTable::SetHopTime(Time hopTime){
-  s_hopTime = hopTime;
-}
-
-void PheromoneTable::SetBetaAnt(double betaAnt) {
-  s_betaAnt = betaAnt;
-}
-
-void PheromoneTable::SetBetaPacket(double betaPacket) {
-  s_betaPacket = betaPacket;
-}
-
+// generic function for creating next hop routes for a given destination
 Ptr<Ipv4Route> PheromoneTable::RouteTo(Ipv4Address source, Ipv4Address dest, double beta) {
   // we first select a random value and then route the packet as soon as
   // the random value is smaller than the cumulative value
-  double randVal = getRand();
+  double randVal = GetRand();
   double totalPm = GetWeightedTotalPheromoneFor(dest, beta);
   double cumulativePmPercent = 0;
   // iterate until we reach the final neighbor
   for (auto nbIter = m_table.begin(); nbIter != m_table.end(); nbIter++) {
     auto neighbor = nbIter->first;
-    double pm = GetPheromoneFor(nbIter->first, dest);
+    double pm = *GetPheromone(neighbor, dest);
     cumulativePmPercent += pm/totalPm;
 
     if(cumulativePmPercent < randVal) {
@@ -133,33 +53,21 @@ Ptr<Ipv4Route> PheromoneTable::RouteTo(Ipv4Address source, Ipv4Address dest, dou
   return CreateRouteFor(source, dest, m_table.begin()-> first);
 }
 
-double PheromoneTable::GetWeightedTotalPheromoneFor(Ipv4Address dest, double beta) {
-  double total = 0;
-
+// sums all the pheromones in a weighted fashion for a given destionation,
+// used by the RouteTo function
+double PheromoneTable::GetWeightedTotalPheromoneFor(Ipv4Address dest, double beta){
+  double totalPheromone = 0;
   for (auto iter = m_table.begin(); iter != m_table.end(); iter++) {
     auto neighborAddress = iter->first;
-    double neighborPheromone = GetPheromoneFor(neighborAddress, dest);
-    total = pow(neighborPheromone, beta);
+    double neighborPheromone = *GetPheromone(neighborAddress, dest);
+    totalPheromone = pow(neighborPheromone, beta);
   }
 
-  return total;
+  return totalPheromone;
 }
 
-std::vector<Ipv4Address> PheromoneTable::GetNeighborAddrs() {
-  return m_table.GetKeys();
-}
-
-
-
-double PheromoneTable::GetPheromoneFor(Ipv4Address neighborAddr, Ipv4Address dest) {
-  // force the default value in case there is no entry for either neigbour
-  // or the destination. Will still give valid results since a default
-  // table is empty and a default value for an absent pheromone is zero.
-  auto neighbourTable = m_table.Lookup(neighborAddr).Value();
-  return neighbourTable.Lookup(dest).Value();
-}
-
-Ptr<Ipv4Route> PheromoneTable::CreateRouteFor(Ipv4Address source, Ipv4Address dest, Ipv4Address neighbor) {
+// creates route (from, to, via)
+Ptr<Ipv4Route> PheromoneTable::CreateRouteFor(Ipv4Address source, Ipv4Address dest, Ipv4Address neighbor){
   auto route = Create<Ipv4Route>();
   route->SetDestination(dest);
   route->SetGateway(neighbor);
@@ -169,6 +77,127 @@ Ptr<Ipv4Route> PheromoneTable::CreateRouteFor(Ipv4Address source, Ipv4Address de
   return route;
 }
 
+// fetch all the neighbors for the pheromone table
+std::vector<Ipv4Address> PheromoneTable::GetNeighborAddrs(){
+  std::vector<Ipv4Address> neighbors;
 
-} // namespace ant_routing
+  for(auto neighborIter = m_table.begin(); neighborIter != m_table.end(); neighborIter++) {
+    neighbors.push_back(neighborIter->first);
+  }
+
+  return neighbors;
+}
+
+// returns a route providing the next hop to get to the destiantion for a packet
+Ptr<Ipv4Route> PheromoneTable::RouteTo(const Ipv4Header& ipv4h) {
+  return RouteTo(ipv4h.GetSource(), ipv4h.GetDestination(), s_betaPacket);
+}
+
+// returns a route providing the next unicast hop to the destination for an ant
+Ptr<Ipv4Route>
+PheromoneTable::RouteTo(const AntHeader& ah) {
+  return RouteTo(ah.GetOrigin(), ah.GetDestination(), s_betaAnt);
+}
+
+// updates the pheromone entries for the neighbor to the destination
+// param neighbor:    the next hop in the route
+// param dest:        the ultimate destination of the route
+// param traveltime:  the time estimate to reach the destination (provided by backwards ant)
+// param hops:        the number of hops the backwards ant has taken to reach the destination
+void PheromoneTable::UpdatePheromone(Ipv4Address neighbor, Ipv4Address dest, Time TravelTime, uint32_t hops){
+
+}
+
+// getter for the pheromone information for a destination
+// at a given neighbor, in case there is no such entry, return the zero pheromone
+const std::shared_ptr<PheromoneTable::PheromoneInfo>
+PheromoneTable::GetPheromone(Ipv4Address neighbor, Ipv4Address dest){
+
+  auto neighborIt = m_table.find(neighbor);
+
+  if(neighborIt == m_table.end()) {
+    return std::make_shared<PheromoneInfo>();
+  }
+
+  auto destIt = neighborIt->second->find(dest);
+
+  if(destIt == neighborIt->second->end()) {
+    return std::make_shared<PheromoneInfo>();
+  }
+
+  return *destIt;
+}
+
+// Returns all routes to neighbors taht do not have a pheromone entry
+// for the destination provided in the ant header (ah)
+std::vector<Ptr<Ipv4Route>>
+PheromoneTable::GetNoPheromoneRoutes(const AntHeader& ah){
+
+}
+
+std::vector<Ptr<Ipv4Route>>
+PheromoneTable::BroadCastRouteTo(const Ipv4Header& ipv4h) {
+  return BroadCastRouteTo(ipv4h.GetSource(), ipv4h.GetDestination());
+}
+
+std::vector<Ptr<Ipv4Route>>
+PheromoneTable::BroadCastRouteTo(const AntHeader& ah) {
+  return BroadCastRouteTo(ah.GetOrigin(), ah.GetDestination());
+}
+
+// generic function for creating broadcast routes for both packets and ants
+std::vector<Ptr<Ipv4Route>>
+PheromoneTable::BroadCastRouteTo(Ipv4Address source, Ipv4Address dest) {
+  std::vector<Ipv4Address> nbAddrs = GetNeighborAddrs();
+  std::vector<Ptr<Ipv4Route>> routes;
+  for(auto iter  = nbAddrs.begin(); iter != nbAddrs.end(); iter++) {
+    routes.push_back(CreateRouteFor(source, destination, *iter));
+  }
+
+  return routes;
+}
+
+// methods for adding and removing neighbors
+void
+PheromoneTable::AddNeighbor(Ipv4Address addr) {
+  m_table[addr] = std::make_shared<InnerTableType>();
+}
+void
+PheromoneTable::RemoveNeighbor(Ipv4Address addr) {
+  m_table.erase(addr);
+}
+// setters
+
+// setter for the output network device, we assume we're using wifi
+// so there is only one output device.
+void
+PheromoneTable::SetNetDevice(Ptr<NetDevice> device) {
+  m_device = device;
+}
+
+// gamma is exponentation value for calculating new pheromone values
+void
+PheromoneTable::SetGamma(double gamma) {
+  s_gamma = gamma;
+}
+// exponent factor used to determine the explorative behavior of
+// unicast ants
+void
+PheromoneTable::SetBetaAnt(double beta){
+  s_betaAnt = beta;
+}
+// exponent factor used to determine the likelyness of using
+// alternative paths for unicast packets
+void
+PheromoneTable::SetBetaPacket(double beta){
+  s_betaPacket = beta;
+}
+// time estimate for how long making a hop wil take (static value)
+void
+PheromoneTable::setHopTime(Time hopTime){
+  s_hopTime = hopTime;
+}
+
+
 } // namespace ns3
+} // namespace ant_routing

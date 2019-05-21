@@ -4,6 +4,7 @@
 #include "ns3/internet-module.h"
 #include "ns3/network-module.h"
 #include "ant-packet.h"
+#include "neighbor.h"
 
 #include <memory>
 #include <map>
@@ -38,41 +39,27 @@ private:
 
 std::ostream& operator<<(std::ostream& os, const PheromoneEntry& pe);
 
-
-// Impelentation of a simple neighbor node.
-struct Neighbor {
+// immutable proxy for a given Neighbor
+struct NeighborProxy {
 public:
 
-  friend bool operator<(const Neighbor& lhs, const Neighbor& rhs);
-
-  // todo add a default device as a static variable? allows to add based on address only
-  Neighbor();
-  Neighbor(Ipv4Address addr); // constructor for implicit conversion from ip address to neighbours
-  Neighbor(Ipv4Address addr, Ptr<NetDevice> device);
-
-  // creates a route fronm souce to destination based on the configuration
-  // of the neighbor
-  Ptr<Ipv4Route> CreateRoute(Ipv4Address source, Ipv4Address destination);
+  NeighborProxy();
+  NeighborProxy(Ipv4Address addr);
+  NeighborProxy(Neighbor neighbor);
 
   Ipv4Address Address() const;
-  void Address(Ipv4Address addr);
 
-  const Ptr<NetDevice> Device() const;
-  void Device(Ptr<NetDevice> device);
+  Neighbor Get();
+  // user defined conversion. Will create a new Neighbor in case
+  // there is no neighbor present.
+  operator Neighbor();
 
 private:
-  // the ip address of the neighbor
   Ipv4Address m_addr;
-  // the device on which to output data destined for the neighbor
-  Ptr<NetDevice> m_device;
+  std::shared_ptr<Neighbor> m_neighbor;
 };
 
-// inequality operator, allows the DefaultNeighbor type to be a key of a
-// std::map
-bool operator<(const Neighbor& lhs, const Neighbor& rhs);
-
-
-std::ostream& operator<<(std::ostream& os, const Neighbor& nb);
+bool operator<(const NeighborProxy &lhs, const NeighborProxy &rhs);
 
 /**
  * Class representing the routing table used to route ants and packages.
@@ -126,11 +113,16 @@ public:
   void AddNeighbor(const Neighbor& nb);
   void RemoveNeighbor(const Neighbor& nb);
 
+  // returns the neighbor corresponding to the provided IP address
+  // boolean indicates whether there was an entry for the neighbor
+  std::pair<Neighbor, bool> GetNeighbor(Ipv4Address addr);
+
   // checks if the given address is the address of a neighbor node
   bool IsNeighbor(Neighbor neighbor);
+  bool IsNeighbor(Ipv4Address addr);
   // returns a vector containing all the neighbors registered in the
   // routing table.
-  std::vector<Neighbor> Neighbors();
+  std::vector<NeighborProxy> Neighbors();
 
   // static variables to configure the calulcations on the ant-routing table.
   static double AntBeta();
@@ -150,7 +142,7 @@ private:
   // instance variables:
   using DestAddr      = Ipv4Address;
   using NeighborTable = std::map<DestAddr, std::shared_ptr<PheromoneEntry>>;
-  std::map<Neighbor, std::shared_ptr<NeighborTable>> m_table;
+  std::map<NeighborProxy, std::shared_ptr<NeighborTable>> m_table;
 
   // static variables:
   static double s_antBeta; // exploration exponent for the ants
@@ -166,7 +158,7 @@ private:
 
   // retrieves the pheromone table of a single neighbor. In case there is no
   // such entry, return a nullpointer
-  std::shared_ptr<NeighborTable> GetNeighborTable(Neighbor neighbor);
+  std::shared_ptr<NeighborTable> GetNeighborTable(NeighborProxy neighbor);
 
   // calculates the total pheromone for a destination with a given
   // beta which serves to configure the explorative behavior of the packet.

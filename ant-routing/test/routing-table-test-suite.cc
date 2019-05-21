@@ -35,14 +35,15 @@ void AntRoutingTableTestCase1::DoRun(void) {
   NS_TEST_ASSERT_MSG_EQ(rt.GetPheromone(neighbor, destination), 0, "The table should be empty");
 
   // adding a new neighbor and retrieving values.
-  rt.AddNeighbor(neighbor);
+  rt.AddNeighbor(Neighbor(neighbor, Ptr<NetDevice>()));
   auto noPheromones = rt.NoPheromoneRoutes(ah);
-
   NS_TEST_ASSERT_MSG_EQ(noPheromones.size(), 1, "There should be no entries in the routing table");
 
   rt.SetPheromoneAt(neighbor, destination, PheromoneEntry(10, 0, Seconds(0)));
   auto pheromone = rt.GetPheromone(neighbor, destination);
+
   NS_TEST_ASSERT_MSG_EQ(pheromone->Value(), 10, "The table should contain an entry");
+
   noPheromones = rt.NoPheromoneRoutes(ah);
   NS_TEST_ASSERT_MSG_EQ(noPheromones.size(), 0, "The the selected destination should have a route");
 }
@@ -66,7 +67,7 @@ void AntRoutingTableTestCase2::DoRun() {
   Time estimate = Seconds(1);
   uint32_t hops = 10;
   AntRoutingTable rt;
-  rt.AddNeighbor(neighborAddr);
+  rt.AddNeighbor(Neighbor(neighborAddr, Ptr<NetDevice>()));
 
   NS_TEST_ASSERT_MSG_EQ(rt.HasPheromoneEntryFor(destinationAddr), false, "Should have no entry");
   NS_TEST_ASSERT_MSG_EQ(rt.IsNeighbor(neighborAddr), true, "The neighborAddress should be registered as a neighbor");

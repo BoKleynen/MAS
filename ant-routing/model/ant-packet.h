@@ -17,7 +17,8 @@ enum AntType
   ProactiveForwardAnt = 1,
   ProactiveBroadcastAnt = 2,
   BackwardAnt = 3,
-  RouteRepairAnt = 4
+  RouteRepairAnt = 4,
+  HelloAnt = 5,
 };
 
 /**
@@ -157,6 +158,34 @@ inline bool operator==(const LinkFailureNotification::Message& lhs, const LinkFa
     && lhs.bestTimeEstimate == rhs.bestTimeEstimate
     && lhs.bestHopEstimate == rhs.bestHopEstimate;
 }
+
+class HelloAnt : public Header
+{
+public:
+  HelloAnt (Ipv4Address origin);
+  HelloAnt ();
+
+  HelloAnt(const HelloAnt& ah) = default;
+  HelloAnt(HelloAnt&& ah) = default;
+
+  HelloAnt& operator=(const HelloAnt& ah) = default;
+  HelloAnt& operator=(HelloAnt&& ah) = default;
+
+  static TypeId GetTypeId ();
+  TypeId GetInstanceTypeId () const;
+  uint32_t GetSerializedSize () const;
+  void Serialize (Buffer::Iterator start) const;
+  uint32_t Deserialize (Buffer::Iterator start);
+  void Print (std::ostream &os) const;
+
+  AntType GetAntType ();
+  Ipv4Address GetOrigin ();
+
+  void SetOrigin (Ipv4Address origin);
+private:
+  AntType     m_antType;
+  Ipv4Address m_origin;
+};
 
 } // namespace ant_routing
 } // namespace

@@ -285,5 +285,84 @@ return os << "Message { "
 }
 
 
+// --------------- HelloAnt ---------------
+
+HelloAnt::HelloAnt ()
+  : m_antType (AntType::HelloAnt),
+    m_origin (Ipv4Address ())
+{
+}
+
+HelloAnt::HelloAnt (Ipv4Address origin)
+  : m_antType (AntType::HelloAnt),
+    m_origin (origin)
+{
+}
+
+TypeId
+HelloAnt::GetTypeId ()
+{
+  static TypeId tid = TypeId ("ns3::ant_routing::AntHeader")
+    .SetParent<Header> ()
+    .SetGroupName ("AntRouting")
+    .AddConstructor<HelloAnt> ();
+  return tid;
+}
+
+TypeId
+HelloAnt::GetInstanceTypeId () const
+{
+  return GetTypeId ();
+}
+
+uint32_t
+HelloAnt::GetSerializedSize () const
+{
+  return sizeof(AntType) + IPV4_ADDRESS_SIZE;
+}
+
+void
+HelloAnt::Serialize (Buffer::Iterator i) const
+{
+  i.WriteU8 (m_antType);
+  WriteTo (i, m_origin);
+}
+
+uint32_t
+HelloAnt::Deserialize (Buffer::Iterator start)
+{
+  auto i = start;
+  m_antType = static_cast<AntType>(i.ReadU8 ());
+  ReadFrom (i, m_origin);
+
+  uint32_t dist = i.GetDistanceFrom (start);
+  NS_ASSERT (dist == GetSerializedSize ());
+  return dist;
+}
+
+void
+HelloAnt::Print (std::ostream &os) const
+{
+  os << "HelloAnt from somewhere";
+}
+
+AntType
+HelloAnt::GetAntType ()
+{
+  return m_antType;
+}
+
+Ipv4Address
+HelloAnt::GetOrigin ()
+{
+  return m_origin;
+}
+
+void
+HelloAnt::SetOrigin (Ipv4Address origin)
+{
+  m_origin = origin;
+}
+
 } // namespace ant_routing
 } // namespace

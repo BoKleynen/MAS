@@ -11,12 +11,17 @@ struct AntQueueEntry {
   using UnicastCallback = Ipv4RoutingProtocol::UnicastForwardCallback;
   using ErrorCallback = Ipv4RoutingProtocol::ErrorCallback;
 
-  AntQueueEntry(Ptr<const Packet> packet, Ptr<Ipv4Route> route, UnicastCallback ufcb, ErrorCallback ecb);
+  AntQueueEntry( Ptr<Ipv4Route> route, Ptr<const Packet> packet,const Ipv4Header& header,  UnicastCallback ufcb);
 
-  Ptr<const Packet> m_packet;
+  // bookkeeping for the router
   Ptr<Ipv4Route> m_route;
+  Ptr<const Packet> m_packet;
+  Ipv4Header m_header;
   UnicastCallback m_unicastCallback;
-  ErrorCallback m_errorCallback;
+
+  // bookkeeping used for the sender of the queue
+  bool m_sending;
+  Time m_sendStartTime;
 };
 
 } // namespace ant_routing

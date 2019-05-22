@@ -7,7 +7,7 @@
 #     conf.check_nonfatal(header_name='stdint.h', define_name='HAVE_STDINT_H')
 
 def build(bld):
-    module = bld.create_ns3_module('ant-routing', ['internet','core'])
+    module = bld.create_ns3_module('ant-routing', ['wifi', 'internet','core'])
     module.includes = '.'
     module.cxxflags = ['-std=c++11','-std=c++14']
     module.source = [
@@ -16,6 +16,7 @@ def build(bld):
         'model/ant-packet.cc',
         'model/neighbor.cc',
         'model/ant-queue-entry.cc',
+        'model/ant-netdevice.cc',
         # 'model/ant.cc',
         # 'model/backward-ant.cc',
         # 'model/forward-ant.cc',
@@ -26,12 +27,12 @@ def build(bld):
         ]
 
     module_test = bld.create_ns3_module_test_library('ant-routing')
+    module_test.cxxflags = ['-std=c++11', '-std=c++14']
     module_test.source = [
         # 'test/ant-routing-test-suite.cc',
         'test/routing-table-test-suite.cc',
         'test/ant-packet-test-suite.cc',
-        # 'test/pheromone-table-test-suite.cc',
-
+        'test/ant-netdevice-test-suite.cc',
         ]
 
     headers = bld(features='ns3header')
@@ -43,6 +44,7 @@ def build(bld):
         'model/ant-packet.h',
         'model/neighbor.h',
         'model/ant-queue-entry.h',
+        'model/ant-netdevice.h'
         # 'model/ant.h',
         # 'model/backward-ant.h',
         # 'model/forward-ant.h',

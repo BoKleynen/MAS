@@ -10,6 +10,7 @@
 namespace ns3 {
 namespace ant_routing {
 
+// TODO hook up the new AntNetDevice Class instead of NetDevice
 // Class representing a neighbor node
 struct Neighbor {
 public:

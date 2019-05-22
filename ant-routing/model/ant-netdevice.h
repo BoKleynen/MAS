@@ -2,6 +2,8 @@
 #define ANT_NETDEVICE_H
 
 #include "ant-queue-entry.h"
+#include "ns3/wifi-module.h"
+#include "ns3/packet.h"
 #include <memory>
 #include <queue>
 
@@ -18,8 +20,8 @@ public:
   Ptr<NetDevice> GetDevice();
   void SetDevice(Ptr<NetDevice> device);
 
-  void Send(AntQueueEntry entry);
-  void SendExpedited(AntQueueEntry entry);
+  void Submit(const AntQueueEntry& entry);
+  void SubmitExpedited(const AntQueueEntry& entry);
 
   // returns the size of the std queue (not used to expedite ants)
   std::size_t QueueSize();
@@ -31,15 +33,13 @@ public:
   static void SetAlpha(double alpha);
 
 private:
-
-  // callback to be called when the transmission failed
-  void DroppedPacketCallback(Ptr<const Packet> packet);
-
-  // callback to be called when the transmission was successful
-  void DeliveredPacketCallback(Ptr<const Packet> packet);
-
   // the alpha value for calculating the average send time
   static double s_alpha;
+
+  static constexpr const char* MacTxDrop = "MacTxDrop";
+  static constexpr const char* TxOkHeader = "TxOkHeader";
+  static constexpr const char* TxErrHeader = "TxErrHeader";
+
   // Pimpl
   struct AntNetDeviceImpl;
   // pointer to implementation

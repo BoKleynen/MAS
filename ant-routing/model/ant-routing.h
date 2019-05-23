@@ -3,7 +3,10 @@
 #define ANT_ROUTING_H
 
 #include "ns3/core-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/network-module.h"
 #include "ns3/ipv4-routing-protocol.h"
+#include <memory>
 
 namespace ns3 {
 namespace ant_routing {
@@ -28,12 +31,12 @@ public:
    * Note: choose good default parameters, allow to change them later via
    * Set attribute (for example the ant-broadcast factor etc)
    */
-  AnthocnetRouting() = default;
+  AnthocnetRouting();
 
   /**
    * default implementation of the destructor
    */
-  virtual ~AnthocnetRouting() = default;
+  virtual ~AnthocnetRouting();
 
  /**
   * Query the underlying routing table to get the Ipv4Route to the next hop
@@ -108,8 +111,20 @@ public:
   virtual void PrintRoutingTable (Ptr<OutputStreamWrapper> stream, Time::Unit unit = Time::S) const override;
 
 private:
-  // ipv4 stack to use
-  Ptr<Ipv4> m_ipv4;
+
+  // callback for when a message is received at the routing protocol socket
+  void ReceiveAnt(Ptr<Socket> socket);
+
+  // constants:
+  static constexpr const char* localhost = "127.0.0.1";
+
+  // returns the first address attached to the interface
+  // always returns the address at index 0 for the interface
+  // this routing protocol now only accepts a single address attached to the interface.
+  Ipv4Address GetAddressOf(Ptr<NetDevice> device);
+
+  struct AnthocnetImpl;
+  std::shared_ptr<AnthocnetImpl> m_impl;
 };
 
 } //namespace ant_routing

@@ -90,8 +90,8 @@ public:
   std::vector<Neighbor> NoPheromoneNeighbors(const AntHeader& ah);
 
   // Creates routes to the destination with as next hop each of the neighbor nodes
-  std::vector<Ptr<Ipv4Route>> BroadCastRouteTo(const AntHeader& ah);
-  std::vector<Neighbor> BroadCastNeighbors();
+  std::vector<Ptr<Ipv4Route>> BroadcastRouteTo(const AntHeader& ah);
+  std::vector<Neighbor> BroadcastNeighbors();
 
   // Phermone related methods:
 

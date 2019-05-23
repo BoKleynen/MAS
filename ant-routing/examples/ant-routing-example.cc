@@ -1,12 +1,12 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 
 #include "ns3/core-module.h"
-#include "ns3/ant-routing-helper.h"
+#include "ns3/anthocnet-helper.h"
 
 using namespace ns3;
 
 
-int 
+int
 main (int argc, char *argv[])
 {
   bool verbose = true;
@@ -22,5 +22,3 @@ main (int argc, char *argv[])
   Simulator::Destroy ();
   return 0;
 }
-
-

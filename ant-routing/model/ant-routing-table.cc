@@ -203,7 +203,7 @@ AntRoutingTable::NoPheromoneNeighbors(const AntHeader& header) {
 }
 
 std::vector<Ptr<Ipv4Route>>
-AntRoutingTable::BroadCastRouteTo(const AntHeader& ah) {
+AntRoutingTable::BroadcastRouteTo(const AntHeader& ah) {
   Ipv4Address source = ah.GetOrigin();
   Ipv4Address destination = ah.GetDestination();
   std::vector<Ptr<Ipv4Route>> routes;
@@ -218,7 +218,7 @@ AntRoutingTable::BroadCastRouteTo(const AntHeader& ah) {
 }
 
 std::vector<Neighbor>
-AntRoutingTable::BroadCastNeighbors() {
+AntRoutingTable::BroadcastNeighbors() {
   std::vector<Neighbor> neighbors;
   for(auto neighborTableIt = m_table.begin(); neighborTableIt != m_table.end(); neighborTableIt ++){
     neighbors.push_back(neighborTableIt->first.Get());

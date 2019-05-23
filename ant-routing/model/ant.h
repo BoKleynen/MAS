@@ -3,48 +3,70 @@
 #define ANT_H
 
 #include "ns3/core-module.h"
+#include "ant-packet.h"
+#include <memory>
 
 namespace ns3 {
 namespace ant_routing {
 
-class AntHeader;
-class AnthocNetRouting;
+class AnthocnetRouting;
 
 /**
  * Interface class that define the behavior of all ants
  */
-class Ant : class Object {
+class Ant {
 public:
-  /**
-   * Type id used to hook the ant up to the metaprogramming system
-   */
-  static TypeId GetTypeId();
+
+  Ant() = default;
+  Ant(const AntHeader& header);
 
   virtual ~Ant();
 
-  /**
-   * Each ant has a specific role to perform when it visits the node
-   * it will mutate some data or log certain entries
-   */
-  virtual void Visit(Ptr<AnthocnetRouting> router) = 0;
+  // Each ant has a specific role to perform when it visits the node
+  // it will mutate some data or log certain entries.
+  virtual void Visit(AnthocnetRouting router) = 0;
 
-  /**
-   * Ant decides what to do next (may cause a broadcast, may launch
-   * a backwards ant etc...).
-   */
-  virtual void Route(Ptr<AnthocnetRouting> router) = 0;
+  // getter and setter
+  const AntHeader& Header();
+  void Header(const AntHeader& antHeader);
 
-  /**
-   * Getter and setter for the header of the ant. This header is used
-   * to guide the ant through the system.
-   */
-  Ptr<AntHeader> GetAntHeader();
-  void SetAntHeader(Ptr<AntHeader> antHeader);
 private:
   /**
    * Header of the ant
    */
-  Ptr<AntHeader> m_header;
+  AntHeader m_header;
+};
+
+class AntQueen {
+public:
+  AntQueen() = default;
+  ~AntQueen() = default;
+
+  // queen creates a new ant from the given header
+  virtual std::shared_ptr<Ant> CreateFrom(const AntHeader& header) = 0;
+
+  virtual uint32_t GetAntTypeId() = 0;
+};
+
+// Requirements for AntType: subclass of ant and constructor with a header
+template<typename AntType>
+class AntQueenImpl : public AntQueen {
+public:
+  virtual uint32_t GetAntTypeId() {
+    return AntType::Type;
+  }
+
+  virtual std::shared_ptr<Ant> CreateFrom(const AntHeader& header) {
+    // if the header number corresponds to the class
+    if(AntType::antType == header.GetAntType()){
+
+      // TODO add some 'modify header' methods that does the mutations
+      // automatically?
+      return std::make_shared<AntType>(header);
+    }
+
+    return nullptr;
+  }
 };
 
 } // namespace ant_routing

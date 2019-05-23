@@ -40,26 +40,27 @@ private:
 std::ostream& operator<<(std::ostream& os, const PheromoneEntry& pe);
 
 // immutable proxy for a given Neighbor
-struct NeighborProxy {
+struct NeighborKey {
 public:
 
-  NeighborProxy();
-  NeighborProxy(Ipv4Address addr);
-  NeighborProxy(Neighbor neighbor);
+  NeighborKey();
+  NeighborKey(Ipv4Address addr);
+  NeighborKey(Neighbor neighbor);
 
   Ipv4Address Address() const;
 
-  Neighbor Get();
+  Neighbor Get() const;
   // user defined conversion. Will create a new Neighbor in case
   // there is no neighbor present.
-  operator Neighbor();
+  operator Neighbor() const;
 
 private:
   Ipv4Address m_addr;
-  std::shared_ptr<Neighbor> m_neighbor;
+  // is not part of the key such that it may change value
+  mutable std::shared_ptr<Neighbor> m_neighbor;
 };
 
-bool operator<(const NeighborProxy &lhs, const NeighborProxy &rhs);
+bool operator<(const NeighborKey &lhs, const NeighborKey &rhs);
 
 /**
  * Class representing the routing table used to route ants and packages.
@@ -80,12 +81,17 @@ public:
   Ptr<Ipv4Route> RouteTo(const Ipv4Header& ipv4h);
   Ptr<Ipv4Route> RouteTo(const AntHeader& ah);
 
+  Neighbor RoutePacket(const Ipv4Header& ipv4h);
+  Neighbor RouteAnt(const AntHeader& ah);
+
   // Creates routes to the destinaton with as next hop all the neighbor nodes
   // That do not yet have any pheromone value.
   std::vector<Ptr<Ipv4Route>> NoPheromoneRoutes(const AntHeader& ah);
+  std::vector<Neighbor> NoPheromoneNeighbors(const AntHeader& ah);
 
   // Creates routes to the destination with as next hop each of the neighbor nodes
   std::vector<Ptr<Ipv4Route>> BroadCastRouteTo(const AntHeader& ah);
+  std::vector<Neighbor> BroadCastNeighbors();
 
   // Phermone related methods:
 
@@ -122,7 +128,7 @@ public:
   bool IsNeighbor(Ipv4Address addr);
   // returns a vector containing all the neighbors registered in the
   // routing table.
-  std::vector<NeighborProxy> Neighbors();
+  std::vector<NeighborKey> Neighbors();
 
   // static variables to configure the calulcations on the ant-routing table.
   static double AntBeta();
@@ -142,7 +148,7 @@ private:
   // instance variables:
   using DestAddr      = Ipv4Address;
   using NeighborTable = std::map<DestAddr, std::shared_ptr<PheromoneEntry>>;
-  std::map<NeighborProxy, std::shared_ptr<NeighborTable>> m_table;
+  std::map<NeighborKey, std::shared_ptr<NeighborTable>> m_table;
 
   // static variables:
   static double s_antBeta; // exploration exponent for the ants
@@ -155,10 +161,11 @@ private:
   // general function that generates a route from source to destination based
   // on the data in the table and the provided bete (explorative behavior)
   Ptr<Ipv4Route> RouteTo(Ipv4Address source, Ipv4Address destination, double beta);
+  Neighbor RouteToNeighbor(Ipv4Address source, Ipv4Address destination, double beta);
 
   // retrieves the pheromone table of a single neighbor. In case there is no
   // such entry, return a nullpointer
-  std::shared_ptr<NeighborTable> GetNeighborTable(NeighborProxy neighbor);
+  std::shared_ptr<NeighborTable> GetNeighborTable(NeighborKey neighbor);
 
   // calculates the total pheromone for a destination with a given
   // beta which serves to configure the explorative behavior of the packet.

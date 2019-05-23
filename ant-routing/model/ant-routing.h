@@ -14,7 +14,9 @@ public:
   /**
    * port for exchanging anthocnet organisational messages
    */
-  static const uint32_t ANTHOCNET_PORT;
+  static constexpr uint32_t ANTHOCNET_PORT = 1012;
+  static constexpr const char* TYPENAME = "ns3::ant_routing::AnthocnetRouting";
+
 
   /**
    * Type id function used to hook us up to the metaprogramming system
@@ -55,56 +57,59 @@ public:
                             UnicastForwardCallback ucb, MulticastForwardCallback mcb,
                             LocalDeliverCallback lcb, ErrorCallback ecb) override;
 
-    /**
-     * \param interface the index of the interface we are being notified about
-     *
-     * Protocols are expected to implement this method to be notified of the state change of
-     * an interface in a node.
-     */
-    virtual void NotifyInterfaceUp (uint32_t interface) override;
-    /**
-     * \param interface the index of the interface we are being notified about
-     *
-     * Protocols are expected to implement this method to be notified of the state change of
-     * an interface in a node.
-     */
-    virtual void NotifyInterfaceDown (uint32_t interface) override;
+  /**
+   * \param interface the index of the interface we are being notified about
+   *
+   * Protocols are expected to implement this method to be notified of the state change of
+   * an interface in a node.
+   */
+  virtual void NotifyInterfaceUp (uint32_t interface) override;
+  /**
+   * \param interface the index of the interface we are being notified about
+   *
+   * Protocols are expected to implement this method to be notified of the state change of
+   * an interface in a node.
+   */
+  virtual void NotifyInterfaceDown (uint32_t interface) override;
 
-    /**
-     * \param interface the index of the interface we are being notified about
-     * \param address a new address being added to an interface
-     *
-     * Protocols are expected to implement this method to be notified whenever
-     * a new address is added to an interface. Typically used to add a 'network route' on an
-     * interface. Can be invoked on an up or down interface.
-     */
-    virtual void NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress address) override;
+  /**
+   * \param interface the index of the interface we are being notified about
+   * \param address a new address being added to an interface
+   *
+   * Protocols are expected to implement this method to be notified whenever
+   * a new address is added to an interface. Typically used to add a 'network route' on an
+   * interface. Can be invoked on an up or down interface.
+   */
+  virtual void NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress address) override;
 
-    /**
-     * \param interface the index of the interface we are being notified about
-     * \param address a new address being added to an interface
-     *
-     * Protocols are expected to implement this method to be notified whenever
-     * a new address is removed from an interface. Typically used to remove the 'network route' of an
-     * interface. Can be invoked on an up or down interface.
-     */
-    virtual void NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddress address) override;
+  /**
+   * \param interface the index of the interface we are being notified about
+   * \param address a new address being added to an interface
+   *
+   * Protocols are expected to implement this method to be notified whenever
+   * a new address is removed from an interface. Typically used to remove the 'network route' of an
+   * interface. Can be invoked on an up or down interface.
+   */
+  virtual void NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddress address) override;
 
-    /**
-     * \param ipv4 the ipv4 object this routing protocol is being associated with
-     *
-     * Typically, invoked directly or indirectly from ns3::Ipv4::SetRoutingProtocol
-     */
-    virtual void SetIpv4 (Ptr<Ipv4> ipv4) override;
+  /**
+   * \param ipv4 the ipv4 object this routing protocol is being associated with
+   *
+   * Typically, invoked directly or indirectly from ns3::Ipv4::SetRoutingProtocol
+   */
+  virtual void SetIpv4 (Ptr<Ipv4> ipv4) override;
 
-    /**
-     * \brief Print the Routing Table entries
-     *
-     * \param stream The ostream the Routing table is printed to
-     * \param unit The time unit to be used in the report
-     */
-    virtual void PrintRoutingTable (Ptr<OutputStreamWrapper> stream, Time::Unit unit = Time::S) const override;
+  /**
+   * \brief Print the Routing Table entries
+   *
+   * \param stream The ostream the Routing table is printed to
+   * \param unit The time unit to be used in the report
+   */
+  virtual void PrintRoutingTable (Ptr<OutputStreamWrapper> stream, Time::Unit unit = Time::S) const override;
 
+private:
+  // ipv4 stack to use
+  Ptr<Ipv4> m_ipv4;
 };
 
 } //namespace ant_routing

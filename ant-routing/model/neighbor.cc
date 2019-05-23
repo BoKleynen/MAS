@@ -9,22 +9,22 @@ namespace ant_routing {
 //TODO: do we want m_addr outside of the neighbor data for faster construction?
 struct Neighbor::NeighborImpl {
   NeighborImpl();
-  NeighborImpl(Ipv4Address addr, Ptr<NetDevice> device);
+  NeighborImpl(Ipv4Address addr, AntNetDevice device);
 
   Ipv4Address m_addr;
-  Ptr<NetDevice> m_device;
+  AntNetDevice m_device;
 
 };
 
 Neighbor::NeighborImpl::NeighborImpl()
   : NeighborImpl(Ipv4Address(), Ptr<NetDevice>()) { }
 
-Neighbor::NeighborImpl::NeighborImpl(Ipv4Address addr, Ptr<NetDevice> device)
+Neighbor::NeighborImpl::NeighborImpl(Ipv4Address addr, AntNetDevice device)
   :m_addr(addr), m_device(device) { }
 
-Neighbor::Neighbor() : Neighbor(Ipv4Address(), Ptr<NetDevice>()) { }
+Neighbor::Neighbor() : Neighbor(Ipv4Address(), AntNetDevice() ) { }
 
-Neighbor::Neighbor(Ipv4Address addr, Ptr<NetDevice> device) : m_impl(std::make_shared<NeighborImpl>(addr, device)) { }
+Neighbor::Neighbor(Ipv4Address addr, AntNetDevice device) : m_impl(std::make_shared<NeighborImpl>(addr, device)) { }
 
 Neighbor::~Neighbor() { }
 
@@ -34,7 +34,7 @@ Neighbor::CreateRoute(Ipv4Address source, Ipv4Address destination) {
   route->SetDestination(destination);
   route->SetSource(source);
   route->SetGateway(this->Address());
-  route->SetOutputDevice(this->Device());
+  route->SetOutputDevice(AntDevice().Device());
 
   return route;
 }
@@ -49,13 +49,13 @@ Neighbor::Address(Ipv4Address addr) {
   m_impl->m_addr = addr;
 }
 
-const Ptr<NetDevice>
-Neighbor::Device() const {
+AntNetDevice
+Neighbor::AntDevice() {
   return m_impl->m_device;
 }
 
 void
-Neighbor::Device(Ptr<NetDevice> device) {
+Neighbor::AntDevice(AntNetDevice device) {
   m_impl->m_device = device;
 }
 
@@ -73,6 +73,20 @@ void
 Neighbor::Data(std::shared_ptr<NeighborImpl> data) {
   m_impl = data;
 }
+
+void
+Neighbor::SumbitPacket(Ptr<Ipv4Route> route, Ptr<const Packet> packet,
+                       const Ipv4Header &header, UnicastCallback callback) {
+  AntDevice().Submit(AntQueueEntry(route, packet, header, callback));
+}
+
+void
+Neighbor::SubmitExpeditedPacket(Ptr<Ipv4Route> route, Ptr<const Packet> packet,
+                                const Ipv4Header &header, UnicastCallback callback) {
+  AntDevice().SubmitExpedited(AntQueueEntry(route, packet, header, callback));
+
+}
+
 
 bool operator<(const Neighbor& lhs, const Neighbor& rhs) {
   return lhs.Address() < rhs.Address();

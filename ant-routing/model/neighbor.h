@@ -1,6 +1,8 @@
 #ifndef ANT_NEIGHBOR_H
 #define ANT_NEIGHBOR_H
 
+#include "ant-netdevice.h"
+
 #include "ns3/internet-module.h"
 #include "ns3/network-module.h"
 
@@ -19,7 +21,7 @@ public:
   friend class AntRoutingTable;
   // todo add a default device as a static variable? allows to add based on address only
   Neighbor();
-  Neighbor(Ipv4Address addr, Ptr<NetDevice> device);
+  Neighbor(Ipv4Address addr, AntNetDevice device);
 
   ~Neighbor();
 
@@ -30,8 +32,18 @@ public:
   Ipv4Address Address() const;
   void Address(Ipv4Address addr);
 
-  const Ptr<NetDevice> Device() const;
-  void Device(Ptr<NetDevice> device);
+  AntNetDevice AntDevice();
+  void AntDevice(AntNetDevice device);
+
+  // submits a packet to the destination, placing the packet in the sending queue
+  // param route:     Route containing next hop to destination
+  // param packet:    the packet to deliver
+  // param header:    Ipv4 header containing information about the packet for the network layer
+  // param callback:  Callback function to be called once the packet is to be sumbitted
+  void SumbitPacket(Ptr<Ipv4Route> route, Ptr<const Packet> packet, const Ipv4Header &header, UnicastCallback callback);
+
+  // submits a packet to the destination, using the expedited lane. (used for ants for example)
+  void SubmitExpeditedPacket(Ptr<Ipv4Route> route, Ptr<const Packet> packet, const Ipv4Header &header, UnicastCallback callback);
 
 private:
 

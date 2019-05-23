@@ -24,6 +24,7 @@ def build(bld):
         # 'model/proactive-ant.cc',
         # 'model/repair-ant.cc',
         # 'helper/ant-routing-helper.cc',
+        'helper/anthocnet-helper.cc'
         ]
 
     module_test = bld.create_ns3_module_test_library('ant-routing')
@@ -44,7 +45,7 @@ def build(bld):
         'model/ant-packet.h',
         'model/neighbor.h',
         'model/ant-queue-entry.h',
-        'model/ant-netdevice.h'
+        'model/ant-netdevice.h',
         # 'model/ant.h',
         # 'model/backward-ant.h',
         # 'model/forward-ant.h',
@@ -52,6 +53,7 @@ def build(bld):
         # 'model/proactive-ant.h',
         # 'model/repair-ant.h',
         # 'helper/ant-routing-helper.h',
+        'helper/anthocnet-helper.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:

@@ -59,6 +59,7 @@ struct AntNetDevice::AntNetDeviceImpl {
   AntQueue m_stdQueue;
   AntQueue m_fastQueue;
   Time m_sendTimeEst; // estimate of the time needed to send a message over the channel
+  std::size_t m_maxQueueSize; // the max queue size for each queue before we start dropping packets
   bool m_tracesHooked;
 };
 
@@ -70,7 +71,7 @@ AntNetDevice::AntNetDeviceImpl::AntNetDeviceImpl()
 // of the constructor of the AntNetDevice since the latter is a reference type
 // and the 'underlying' device must only be hooked up once
 AntNetDevice::AntNetDeviceImpl::AntNetDeviceImpl(Ptr<NetDevice> device)
-  : m_device(device), m_stdQueue(AntQueue()), m_fastQueue(AntQueue()), m_tracesHooked(false) {
+  : m_device(device), m_stdQueue(AntQueue()), m_fastQueue(AntQueue()), m_maxQueueSize(DEFAULT_MAX_QUEUESIZE), m_tracesHooked(false) {
     HookupTraces(device);
   }
 
@@ -235,22 +236,30 @@ AntNetDevice::AntNetDevice(Ptr<NetDevice> device) : m_impl(std::make_shared<AntN
 AntNetDevice::~AntNetDevice() { }
 
 Ptr<NetDevice>
-AntNetDevice::GetDevice() {
+AntNetDevice::Device() {
   return m_impl -> m_device;
 }
 
 void
-AntNetDevice::SetDevice(Ptr<NetDevice> device) {
+AntNetDevice::Device(Ptr<NetDevice> device) {
   m_impl -> m_device;
 }
 
 void
 AntNetDevice::Submit(const AntQueueEntry& entry) {
+  if(m_impl -> m_stdQueue.size() > MaxQueueSize()) {
+    return; // drop the packet. TODO do we add a trace source for this?
+  }
+
   m_impl -> SubmitTo(entry, m_impl -> m_stdQueue);
 }
 
 void
 AntNetDevice::SubmitExpedited(const AntQueueEntry& entry) {
+  if(m_impl -> m_stdQueue.size() > MaxQueueSize()) {
+    return;
+  }
+
   m_impl -> SubmitTo(entry, m_impl -> m_fastQueue);
 }
 
@@ -262,8 +271,18 @@ AntNetDevice::QueueSize() {
 
 // moving average of the send time of the node
 Time
-AntNetDevice::SendTimeEstimate() {
+AntNetDevice::SendingTimeEst() {
   return m_impl -> m_sendTimeEst;
+}
+
+std::size_t
+AntNetDevice::MaxQueueSize() {
+  return m_impl -> m_maxQueueSize;
+}
+
+void
+AntNetDevice::MaxQueueSize(std::size_t maxQueueSize) {
+  m_impl -> m_maxQueueSize = maxQueueSize;
 }
 
 double

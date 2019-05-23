@@ -23,7 +23,7 @@ public:
   virtual ~AntNetDeviceTestCase1() = default;
 private:
   virtual void DoRun() override;
-  void Call(Ipv4Address sourceAddr, Ipv4Address destAddr, AntNetDevice sourceAntDev, AntQueueEntry::UnicastCallback ucb, Ptr<Ipv4> ipv4);
+  void Call(Ipv4Address sourceAddr, Ipv4Address destAddr, AntNetDevice sourceAntDev, UnicastCallback ucb, Ptr<Ipv4> ipv4);
   void CounterCallback(Ptr<Ipv4Route> route, Ptr<const Packet> p, const Ipv4Header& header);
   uint32_t m_counter;
 };
@@ -85,7 +85,7 @@ void AntNetDeviceTestCase1::DoRun() {
   // // + we do not get any noise on the tests from the routing protocol.
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
-  AntQueueEntry::UnicastCallback cb = MakeCallback(&AntNetDeviceTestCase1::CounterCallback, this);
+  UnicastCallback cb = MakeCallback(&AntNetDeviceTestCase1::CounterCallback, this);
 
   uint32_t packageCount(5); // do not go over 5 for testing purposes... packages will be dropped at IP layer!
 
@@ -97,15 +97,14 @@ void AntNetDeviceTestCase1::DoRun() {
   Simulator::Run();
   Simulator::Destroy();
   NS_TEST_ASSERT_MSG_EQ(m_counter, packageCount, "none of the packages should get lost");
-  NS_TEST_ASSERT_MSG_NE(sourceAntDev.SendTimeEstimate(), 0.0, "better estimate should be found");
-  NS_LOG_UNCOND(sourceAntDev.SendTimeEstimate().GetSeconds());
+  NS_TEST_ASSERT_MSG_NE(sourceAntDev.SendingTimeEst(), 0.0, "better estimate should be found");
 }
 
 void
 AntNetDeviceTestCase1::Call(Ipv4Address sourceAddr,
                          Ipv4Address destAddr,
                          AntNetDevice sourceAntDev,
-                         AntQueueEntry::UnicastCallback ucb,
+                         UnicastCallback ucb,
                          Ptr<Ipv4> ipv4) {
    Ptr<Packet> packet = Create<Packet>();
    Ipv4Header header;
@@ -113,7 +112,7 @@ AntNetDeviceTestCase1::Call(Ipv4Address sourceAddr,
    header.SetDestination(sourceAddr);
    Ipv4GlobalRoutingHelper helper;
    Socket::SocketErrno err;
-   auto routeToDest = ipv4->GetRoutingProtocol() -> RouteOutput(packet, header, sourceAntDev.GetDevice(), err);
+   auto routeToDest = ipv4->GetRoutingProtocol() -> RouteOutput(packet, header, sourceAntDev.Device(), err);
 
    // place an entry in the queue of the ant device, will do a callback to the forwarder
    sourceAntDev.Submit(AntQueueEntry( Ptr<Ipv4Route>(), packet, header, ucb));

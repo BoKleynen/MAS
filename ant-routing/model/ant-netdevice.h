@@ -17,8 +17,8 @@ public:
 
  ~AntNetDevice();
 
-  Ptr<NetDevice> GetDevice();
-  void SetDevice(Ptr<NetDevice> device);
+  Ptr<NetDevice> Device();
+  void Device(Ptr<NetDevice> device);
 
   void Submit(const AntQueueEntry& entry);
   void SubmitExpedited(const AntQueueEntry& entry);
@@ -27,7 +27,10 @@ public:
   std::size_t QueueSize();
 
   // moving average of the send time of the node
-  Time SendTimeEstimate();
+  Time SendingTimeEst();
+
+  std::size_t MaxQueueSize();
+  void MaxQueueSize(std::size_t size);
 
   static double GetAlpha();
   static void SetAlpha(double alpha);
@@ -39,6 +42,8 @@ private:
   static constexpr const char* MacTxDrop = "MacTxDrop";
   static constexpr const char* TxOkHeader = "TxOkHeader";
   static constexpr const char* TxErrHeader = "TxErrHeader";
+
+  static constexpr std::size_t DEFAULT_MAX_QUEUESIZE = 20;
 
   // Pimpl
   struct AntNetDeviceImpl;

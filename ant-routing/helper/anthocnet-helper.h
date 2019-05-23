@@ -2,12 +2,16 @@
 #ifndef ANTHOCNET_HELPER_H
 #define ANTHOCNET_HELPER_H
 
-#include "ns3/anthocnet-routing-protocol.h"
+#include "ns3/ant-routing.h"
 #include "ns3/ipv4-routing-helper.h"
+#include "ns3/node.h"
+#include "ns3/object-factory.h"
+#include "ns3/node-container.h"
 
 // helpers are always located in the ns3 namespace
 namespace ns3 {
 
+// TODO is still barebones, we may want to add some fluff to ease the setup
 class AnthocnetHelper : public Ipv4RoutingHelper {
 
 public:
@@ -16,7 +20,7 @@ public:
    * Default constructor of the helper
    * // TODO instantiate the real helper, default is such that it compiles
    */
-  AnthocnetHelper() = default;
+  AnthocnetHelper();
 
   /**
    * use default implementation of destructor (no fancy stuff on deletion)

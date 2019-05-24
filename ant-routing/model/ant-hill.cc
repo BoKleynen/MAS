@@ -31,8 +31,15 @@ AntHill::CreateFrom(const AntHeader& header) {
 
 void
 AntHill::AddQueen(std::shared_ptr<AntQueen> queen) {
-  m_impl -> m_queens[queen->GetAntTypeId()] = queen;
+  m_impl -> m_queens[queen->GetAntType()] = queen;
 }
+
+std::shared_ptr<AntQueen>
+AntHill::GetQueen(AntType antType) {
+  auto queen = m_impl -> m_queens.find(antType);
+  return queen != m_impl -> m_queens.end() ? queen -> second : nullptr;
+}
+
 
 } // namespace ant_routing
 } // namespace ns3

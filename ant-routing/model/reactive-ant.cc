@@ -27,8 +27,8 @@ std::shared_ptr<Ant> AntQueenImpl<ReactiveAnt>::CreateFrom(const AntHeader& head
   return std::make_shared<ReactiveAnt>(header);
 }
 
-AntType AntQueenImpl<ReactiveAnt>::GetAntTypeId() {
-  return ReactiveAnt::antType;
+AntType AntQueenImpl<ReactiveAnt>::GetAntType() {
+  return ReactiveAnt::species;
 }
 
 
@@ -74,7 +74,7 @@ bool AntQueenImpl<ReactiveAnt>::IsBetterAnt(const AntHeader& header) {
 }
 
 bool AntQueenImpl<ReactiveAnt>::HasRightAntType(const AntHeader& header) {
-  return ReactiveAnt::antType == header.GetAntType();
+  return ReactiveAnt::species == header.GetAntType();
 }
 
 

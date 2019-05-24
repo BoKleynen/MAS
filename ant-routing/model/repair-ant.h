@@ -14,7 +14,7 @@ public:
   virtual ~RepairAnt() = default;
   virtual void Visit(AnthocnetRouting router) override;
 
-  static constexpr  AntType antType = AntType::RouteRepairAnt;
+  static constexpr  AntType species = AntType::RouteRepairAnt;
 };
 
 using RepairQueen = AntQueenImpl<RepairAnt>;

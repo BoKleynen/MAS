@@ -2,6 +2,7 @@
 #define ANT_HILL_H
 
 #include <memory>
+#include "ant-packet.h"
 
 namespace ns3 {
 namespace ant_routing {
@@ -19,6 +20,8 @@ public:
   std::shared_ptr<Ant> CreateFrom(const AntHeader& header);
 
   void AddQueen(std::shared_ptr<AntQueen> queen);
+
+  std::shared_ptr<AntQueen> GetQueen(AntType antType);
 private:
   struct AntHillImpl;
   std::shared_ptr<AntHillImpl> m_impl;

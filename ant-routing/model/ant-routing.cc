@@ -7,6 +7,7 @@
 #include "proactive-ant.h"
 #include "reactive-ant.h"
 #include "repair-ant.h"
+#include "ant-routing-table.h"
 
 namespace ns3 {
 
@@ -18,6 +19,8 @@ namespace ant_routing {
 struct AnthocnetRouting::AnthocnetImpl {
 
   AnthocnetImpl();
+
+  AntRoutingTable m_routingTable;
 
   AntHill m_antHill;
   // the address of the wifi interface attached

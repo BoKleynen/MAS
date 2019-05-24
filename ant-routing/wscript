@@ -23,6 +23,7 @@ def build(bld):
         'model/proactive-ant.cc',
         'model/repair-ant.cc',
         'model/ant-hill.cc',
+        'model/neighbor-manager.cc',
         # 'helper/ant-routing-helper.cc',
         'helper/anthocnet-helper.cc'
         ]
@@ -52,6 +53,7 @@ def build(bld):
         'model/proactive-ant.h',
         'model/repair-ant.h',
         'model/ant-hill.h',
+        'model/neighbor-manager.h',
         # 'helper/ant-routing-helper.h',
         'helper/anthocnet-helper.h',
         ]

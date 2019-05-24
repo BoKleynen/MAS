@@ -21,7 +21,7 @@ public:
    */
   virtual void Visit(AnthocnetRouting router) override;
 
-  static constexpr AntType antType = AntType::BackwardAnt;
+  static constexpr AntType species = AntType::BackwardAnt;
 
 };
 

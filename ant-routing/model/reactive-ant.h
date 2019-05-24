@@ -14,14 +14,14 @@ public:
   virtual ~ReactiveAnt() = default;
   virtual void Visit(AnthocnetRouting router) override;
 
-  static constexpr AntType antType = AntType::ReactiveForwardAnt;
+  static constexpr AntType species = AntType::ReactiveForwardAnt;
 };
 
 template<>
 class AntQueenImpl<ReactiveAnt> : public AntQueen {
 public:
   virtual std::shared_ptr<Ant> CreateFrom(const AntHeader& header) override;
-  virtual AntType GetAntTypeId() override;
+  virtual AntType GetAntType() override;
 
   bool CanBeAdmitted(const AntHeader& header);
 

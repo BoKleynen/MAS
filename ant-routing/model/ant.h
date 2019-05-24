@@ -45,15 +45,15 @@ public:
   // queen creates a new ant from the given header
   virtual std::shared_ptr<Ant> CreateFrom(const AntHeader& header) = 0;
 
-  virtual AntType GetAntTypeId() = 0;
+  virtual AntType GetAntType() = 0;
 };
 
 // Requirements for AntType: subclass of ant and constructor with a header
 template<typename AntSpecies>
 class AntQueenImpl : public AntQueen {
 public:
-  virtual AntType GetAntTypeId() override {
-    return AntSpecies::antType;
+  virtual AntType GetAntType() override {
+    return AntSpecies::species;
   }
 
   virtual std::shared_ptr<Ant> CreateFrom(const AntHeader& header) override {
@@ -71,7 +71,7 @@ public:
   }
 
   bool HasRightAntType(const AntHeader& header) {
-    return AntSpecies::antType == header.GetAntType();
+    return AntSpecies::species == header.GetAntType();
   }
 };
 

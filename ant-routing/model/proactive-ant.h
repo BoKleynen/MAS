@@ -17,7 +17,7 @@ public:
   // it will mutate some data or log certain entries
   virtual void Visit(AnthocnetRouting router) override;
 
-  static constexpr AntType antType = AntType::ProactiveForwardAnt;
+  static constexpr AntType species = AntType::ProactiveForwardAnt;
 };
 
 using ProactiveQueen = AntQueenImpl<ProactiveAnt>;

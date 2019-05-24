@@ -11,7 +11,7 @@
 namespace ns3 {
 namespace ant_routing {
 
-enum AntType
+class enum AntType
 {
   ReactiveForwardAnt = 0,
   ProactiveForwardAnt = 1,

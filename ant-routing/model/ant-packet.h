@@ -19,6 +19,42 @@ enum class AntType : uint8_t
   BackwardAnt = 3,
   RouteRepairAnt = 4,
   HelloAnt = 5,
+  LinkFailureAnt = 6,
+};
+
+class AntNetHeader : public Header
+{
+public:
+  AntNetHeader ();
+  AntNetHeader (AntType antType, Ipv4Address origin);
+
+  AntNetHeader(const AntNetHeader& ah) = default;
+  AntNetHeader(AntNetHeader&& ah) = default;
+
+  AntNetHeader& operator=(const AntNetHeader& ah) = default;
+  AntNetHeader& operator=(AntNetHeader&& ah) = default;
+
+  uint32_t GetSerializedSize () const;
+  void Serialize (Buffer::Iterator start) const;
+  uint32_t Deserialize (Buffer::Iterator i);
+  static TypeId GetTypeId ();
+  TypeId GetInstanceTypeId () const;
+  void Print (std::ostream &os) const;
+
+  AntType GetAntType () const;
+  Ipv4Address GetOrigin () const;
+
+  void SetAntType (AntType antType);
+  void SetOrigin (Ipv4Address origin);
+
+  inline bool operator== (const AntNetHeader& rhs)
+  {
+    return m_antType == rhs.m_antType && m_origin == rhs.m_origin;
+  }
+
+private:
+  AntType       m_antType;
+  Ipv4Address   m_origin;
 };
 
 /**
@@ -41,7 +77,7 @@ enum class AntType : uint8_t
 |                                                               |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
   */
-class AntHeader : public Header
+class AntHeader : public AntNetHeader
 {
 public:
   // full fledged constructor
@@ -67,22 +103,18 @@ public:
   uint32_t Deserialize (Buffer::Iterator start);
   void Print (std::ostream &os) const;
 
-  AntType GetAntType() const;
   uint8_t GetHopCount() const;
   uint8_t GetBroadcastCount() const;
   uint8_t GetBackwardCount() const;
   uint32_t GetGeneration() const;
-  Ipv4Address GetOrigin() const;
   Ipv4Address GetDestination() const;
   Time GetTimeEstimate() const;
   std::vector<Ipv4Address> GetVisitedNodes();
 
-  void SetAntType(AntType antType);
   void SetHopCount(uint8_t hopCount);
   void SetBroadcastCount(uint8_t broadcastCount);
   void SetBackwardCount(uint8_t backwardCount);
   void SetGeneration(uint32_t generation);
-  void SetOrigin(Ipv4Address origin);
   void SetDestination(Ipv4Address dest);
   void SetTimeEstimate(Time timeEstimate);
   void SetVisitedNodes(const std::vector<Ipv4Address>& visited);
@@ -91,12 +123,10 @@ public:
   void AddVisitedNode(Ipv4Address addr);
 
 private:
-  AntType                   m_antType;
   uint8_t                   m_hopCount;
   uint8_t                   m_broadcastCount;
   uint8_t                   m_backwardCount;
   uint32_t                  m_generation;
-  Ipv4Address               m_origin;
   Ipv4Address               m_dst;
   Time                      m_timeEstimate;
   std::vector<Ipv4Address>  m_visitedNodes;
@@ -116,7 +146,7 @@ private:
 
 }; // class HelloHeader
 
-class LinkFailureNotification : public Header {
+class LinkFailureNotification : public AntNetHeader {
 public:
   struct Message
   {
@@ -140,12 +170,11 @@ public:
   uint32_t Deserialize (Buffer::Iterator start);
   void Print (std::ostream &os) const;
 
-  bool operator ==(const LinkFailureNotification& rhs)
+  inline bool operator ==(const LinkFailureNotification& rhs)
   {
-    return m_origin == rhs.m_origin && m_messages == rhs.m_messages;
+    return AntNetHeader::operator== (rhs) && m_messages == rhs.m_messages;
   }
 private:
-  Ipv4Address m_origin;
   std::vector<Message> m_messages;
 
 }; // LinkFailureNotification
@@ -158,34 +187,6 @@ inline bool operator==(const LinkFailureNotification::Message& lhs, const LinkFa
     && lhs.bestTimeEstimate == rhs.bestTimeEstimate
     && lhs.bestHopEstimate == rhs.bestHopEstimate;
 }
-
-class HelloAnt : public Header
-{
-public:
-  HelloAnt (Ipv4Address origin);
-  HelloAnt ();
-
-  HelloAnt(const HelloAnt& ah) = default;
-  HelloAnt(HelloAnt&& ah) = default;
-
-  HelloAnt& operator=(const HelloAnt& ah) = default;
-  HelloAnt& operator=(HelloAnt&& ah) = default;
-
-  static TypeId GetTypeId ();
-  TypeId GetInstanceTypeId () const;
-  uint32_t GetSerializedSize () const;
-  void Serialize (Buffer::Iterator start) const;
-  uint32_t Deserialize (Buffer::Iterator start);
-  void Print (std::ostream &os) const;
-
-  AntType GetAntType ();
-  Ipv4Address GetOrigin ();
-
-  void SetOrigin (Ipv4Address origin);
-private:
-  AntType     m_antType;
-  Ipv4Address m_origin;
-};
 
 } // namespace ant_routing
 } // namespace

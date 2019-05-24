@@ -65,7 +65,7 @@ AntHeader::GetSerializedSize () const
 void
 AntHeader::Serialize (Buffer::Iterator i) const
 {
-  i.WriteU8 (m_antType);
+  i.WriteU8 (static_cast<uint8_t>(m_antType));
   i.WriteU8 (m_hopCount);
   i.WriteU8 (m_broadcastCount);
   i.WriteU8 (m_backwardCount);
@@ -324,7 +324,7 @@ HelloAnt::GetSerializedSize () const
 void
 HelloAnt::Serialize (Buffer::Iterator i) const
 {
-  i.WriteU8 (m_antType);
+  i.WriteU8 (static_cast<uint8_t>(m_antType));
   WriteTo (i, m_origin);
 }
 

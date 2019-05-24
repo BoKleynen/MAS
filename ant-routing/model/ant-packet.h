@@ -132,20 +132,6 @@ private:
   std::vector<Ipv4Address>  m_visitedNodes;
 }; // class AntHeader
 
-class HelloHeader {
-public:
-  HelloHeader ();
-
-  static TypeId GetTypeId ();
-  TypeId GetInstanceTypeId () const;
-  uint32_t GetSerializedSize () const;
-  void Serialize (Buffer::Iterator start) const;
-  uint32_t Deserialize (Buffer::Iterator start);
-  void Print (std::ostream &os) const;
-private:
-
-}; // class HelloHeader
-
 class LinkFailureNotification : public AntNetHeader {
 public:
   struct Message

@@ -11,9 +11,6 @@ namespace ant_routing {
  */
 class BackwardAnt : public Ant {
 public:
-
-  friend class BackwardQueen;
-
   BackwardAnt(const AntHeader& header);
   BackwardAnt() = default;
   virtual ~BackwardAnt() = default;
@@ -27,6 +24,9 @@ public:
   static constexpr AntType antType = AntType::BackwardAnt;
 
 };
+
+using BackwardQueen = AntQueenImpl<BackwardAnt>;
+
 } // namespace ant_routing
 } // namespace ns3
 #endif // BACKWARD_ANT_H

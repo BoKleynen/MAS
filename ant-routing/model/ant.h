@@ -45,27 +45,33 @@ public:
   // queen creates a new ant from the given header
   virtual std::shared_ptr<Ant> CreateFrom(const AntHeader& header) = 0;
 
-  virtual uint32_t GetAntTypeId() = 0;
+  virtual AntType GetAntTypeId() = 0;
 };
 
 // Requirements for AntType: subclass of ant and constructor with a header
-template<typename AntType>
+template<typename AntSpecies>
 class AntQueenImpl : public AntQueen {
 public:
-  virtual uint32_t GetAntTypeId() {
-    return AntType::Type;
+  virtual AntType GetAntTypeId() override {
+    return AntSpecies::antType;
   }
 
-  virtual std::shared_ptr<Ant> CreateFrom(const AntHeader& header) {
+  virtual std::shared_ptr<Ant> CreateFrom(const AntHeader& header) override {
     // if the header number corresponds to the class
-    if(AntType::antType == header.GetAntType()){
-
-      // TODO add some 'modify header' methods that does the mutations
-      // automatically?
-      return std::make_shared<AntType>(header);
+    if(!HasRightAntType(header)){
+      return nullptr;
     }
 
-    return nullptr;
+    // TODO add some 'modify header' methods that does the mutations
+    // automatically?
+    // TODO maybe add some automatic verification of the package besides
+    // having the right type. For example a forward and may not have a backward count
+    // different from zero
+    return std::make_shared<AntSpecies>(header);
+  }
+
+  bool HasRightAntType(const AntHeader& header) {
+    return AntSpecies::antType == header.GetAntType();
   }
 };
 

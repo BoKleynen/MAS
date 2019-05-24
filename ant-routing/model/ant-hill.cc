@@ -6,7 +6,7 @@ namespace ns3 {
 namespace ant_routing {
 
 struct AntHill::AntHillImpl {
-  using QueenMap = std::map<uint32_t, std::shared_ptr<AntQueen>>;
+  using QueenMap = std::map<AntType, std::shared_ptr<AntQueen>>;
 
   AntHillImpl();
   QueenMap m_queens;

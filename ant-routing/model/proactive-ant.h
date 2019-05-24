@@ -19,6 +19,9 @@ public:
 
   static constexpr AntType antType = AntType::ProactiveForwardAnt;
 };
+
+using ProactiveQueen = AntQueenImpl<ProactiveAnt>;
+
 } // namespace ant_routing
 } // namespace ns3
 #endif // PROACTIVE_ANT

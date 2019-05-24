@@ -17,6 +17,9 @@ public:
   static constexpr  AntType antType = AntType::RouteRepairAnt;
 };
 
+using RepairQueen = AntQueenImpl<RepairAnt>;
+
+
 } // namespace ns3
 } // namespace ant_routing
 

@@ -3,6 +3,10 @@
 #include "ant-routing.h"
 #include "ant-hill.h"
 #include "ant.h"
+#include "backward-ant.h"
+#include "proactive-ant.h"
+#include "reactive-ant.h"
+#include "repair-ant.h"
 
 namespace ns3 {
 
@@ -12,6 +16,9 @@ namespace ant_routing {
 
 
 struct AnthocnetRouting::AnthocnetImpl {
+
+  AnthocnetImpl();
+
   AntHill m_antHill;
   // the address of the wifi interface attached
   Ipv4InterfaceAddress m_ifAddress;
@@ -25,6 +32,21 @@ struct AnthocnetRouting::AnthocnetImpl {
   // ipv4 stack to use
   Ptr<Ipv4> m_ipv4;
 };
+
+AnthocnetRouting::AnthocnetImpl::AnthocnetImpl()
+  : m_antHill(AntHill()),
+    m_ifAddress(Ipv4InterfaceAddress()),
+    m_socket(Ptr<Socket>()),
+    m_broadcastSocket(Ptr<Socket>()),
+    m_loopback(Ptr<NetDevice>()),
+    m_ipv4(Ptr<Ipv4>()) {
+
+  m_antHill.AddQueen(std::make_shared<BackwardQueen>());
+  m_antHill.AddQueen(std::make_shared<ProactiveQueen>());
+  m_antHill.AddQueen(std::make_shared<ReactiveQueen>());
+  m_antHill.AddQueen(std::make_shared<RepairQueen>());
+}
+
 
 // ensures that the object is already registered...  NS stuff
 // do not remove unless you want to break things.
@@ -165,6 +187,10 @@ AnthocnetRouting::ReceiveAnt(Ptr<Socket> socket) {
   // TODO add methods to check if ttl is right etc, where are we going to place this
   // responsibility?
   auto ant = m_impl->m_antHill.CreateFrom(antHeader);
+  if( ant == nullptr) {
+    NS_LOG_WARN("Broken package received at: " << m_impl -> m_ifAddress << packet);
+    return;
+  }
   ant -> Visit(*this);
 }
 

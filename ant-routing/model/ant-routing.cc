@@ -5,6 +5,7 @@
 #include "ant.h"
 #include "backward-ant.h"
 #include "hello-ant.h"
+#include "link-failure-ant.h"
 #include "proactive-ant.h"
 #include "reactive-ant.h"
 #include "repair-ant.h"
@@ -67,6 +68,7 @@ AnthocnetRouting::AnthocnetImpl::AnthocnetImpl()
   m_antHill.AddQueen(std::make_shared<ReactiveQueen>());
   m_antHill.AddQueen(std::make_shared<RepairQueen>());
   m_antHill.AddQueen(std::make_shared<HelloQueen>());
+  m_antHill.AddQueen(std::make_shared<LinkFailureQueen>());
 }
 
 

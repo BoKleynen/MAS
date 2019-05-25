@@ -9,7 +9,7 @@ class RepairAnt : public Ant {
 public:
 
   RepairAnt() = default;
-  RepairAnt(const AntHeader& header);
+  RepairAnt(Ptr<Packet> packet);
 
   virtual ~RepairAnt() = default;
   virtual void Visit(AnthocnetRouting router) override;

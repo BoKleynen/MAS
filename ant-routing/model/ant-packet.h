@@ -22,20 +22,22 @@ enum class AntType : uint8_t
   LinkFailureAnt = 6,
 };
 
+// AntTypeHeader ----------------------------------------------------------------
+
 /*
  * specifies the type of header that follows and the ip adress of the sender.
  */
-class AntNetHeader : public Header
+class AntTypeHeader : public Header
 {
 public:
-  AntNetHeader ();
-  AntNetHeader (AntType antType, Ipv4Address origin);
+  AntTypeHeader ();
+  AntTypeHeader (AntType antType);
 
-  AntNetHeader(const AntNetHeader& ah) = default;
-  AntNetHeader(AntNetHeader&& ah) = default;
+  AntTypeHeader(const AntTypeHeader& ah) = default;
+  AntTypeHeader(AntTypeHeader&& ah) = default;
 
-  AntNetHeader& operator=(const AntNetHeader& ah) = default;
-  AntNetHeader& operator=(AntNetHeader&& ah) = default;
+  AntTypeHeader& operator=(const AntTypeHeader& ah) = default;
+  AntTypeHeader& operator=(AntTypeHeader&& ah) = default;
 
   uint32_t GetSerializedSize () const;
   void Serialize (Buffer::Iterator start) const;
@@ -45,19 +47,15 @@ public:
   void Print (std::ostream &os) const;
 
   AntType GetAntType () const;
-  Ipv4Address GetOrigin () const;
-
   void SetAntType (AntType antType);
-  void SetOrigin (Ipv4Address origin);
 
-  inline bool operator== (const AntNetHeader& rhs)
+  inline bool operator== (const AntTypeHeader& rhs)
   {
-    return m_antType == rhs.m_antType && m_origin == rhs.m_origin;
+    return m_antType == rhs.m_antType;
   }
 
 private:
   AntType       m_antType;
-  Ipv4Address   m_origin;
 };
 
 /**
@@ -69,6 +67,8 @@ private:
 |                           Generation                          |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                         Time Estimate                         |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                                                               |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                      Destination Address                      |
@@ -85,7 +85,7 @@ public:
   AntHeader (std::vector<Ipv4Address> visitedNodes,
             uint8_t hopCount, uint8_t broadcastCount,
             uint8_t m_backwardCount, uint32_t generation,
-            Ipv4Address dst, Time timeEstimate);
+            Ipv4Address source,Ipv4Address dst, Time timeEstimate);
 
   AntHeader(); // default constructor
 
@@ -107,6 +107,7 @@ public:
   uint8_t GetBroadcastCount() const;
   uint8_t GetBackwardCount() const;
   uint32_t GetGeneration() const;
+  Ipv4Address GetSource() const;
   Ipv4Address GetDestination() const;
   Time GetTimeEstimate() const;
   std::vector<Ipv4Address> GetVisitedNodes();
@@ -115,6 +116,7 @@ public:
   void SetBroadcastCount(uint8_t broadcastCount);
   void SetBackwardCount(uint8_t backwardCount);
   void SetGeneration(uint32_t generation);
+  void SetSource(Ipv4Address source);
   void SetDestination(Ipv4Address dest);
   void SetTimeEstimate(Time timeEstimate);
   void SetVisitedNodes(const std::vector<Ipv4Address>& visited);
@@ -127,11 +129,34 @@ private:
   uint8_t                   m_broadcastCount;
   uint8_t                   m_backwardCount;
   uint32_t                  m_generation;
+  Ipv4Address               m_source;
   Ipv4Address               m_dst;
   Time                      m_timeEstimate;
   std::vector<Ipv4Address>  m_visitedNodes;
 }; // class AntHeader
 
+// Hello declaration -----------------------------------------------------------
+class HelloHeader : public Header {
+public:
+
+  HelloHeader();
+  HelloHeader(Ipv4Address source);
+
+  static TypeId GetTypeId ();
+  TypeId GetInstanceTypeId () const;
+  uint32_t GetSerializedSize () const;
+  void Serialize (Buffer::Iterator start) const;
+  uint32_t Deserialize (Buffer::Iterator start);
+  void Print (std::ostream &os) const;
+
+  Ipv4Address GetSource() const;
+  void SetSource(Ipv4Address source);
+
+private:
+  Ipv4Address m_source;
+};
+
+//LinkFaiure declaration -------------------------------------------------------
 class LinkFailureNotification : public Header {
 public:
   struct Message
@@ -146,7 +171,7 @@ public:
   };
 
   LinkFailureNotification ();
-  LinkFailureNotification (std::vector<Message> messages);
+  LinkFailureNotification (Ipv4Address source, std::vector<Message> messages);
 
   static TypeId GetTypeId ();
   TypeId GetInstanceTypeId () const;
@@ -155,14 +180,21 @@ public:
   uint32_t Deserialize (Buffer::Iterator start);
   void Print (std::ostream &os) const;
 
+  Ipv4Address GetSource() const;
+  std::vector<Message> GetMessages();
+
+  void SetSource(Ipv4Address source);
+  void SetMessages(std::vector<Message> messages);
+
+
   inline bool operator ==(const LinkFailureNotification& rhs)
   {
     return m_messages == rhs.m_messages;
   }
-  
-private:
-  std::vector<Message> m_messages;
 
+private:
+  Ipv4Address m_source;
+  std::vector<Message> m_messages;
 }; // LinkFailureNotification
 
 std::ostream& operator <<(std::ostream& os, const LinkFailureNotification::Message& message);

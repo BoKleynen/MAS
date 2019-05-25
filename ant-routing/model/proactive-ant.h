@@ -8,7 +8,7 @@ namespace ant_routing {
 
 class ProactiveAnt : public Ant {
 public:
-  ProactiveAnt(const AntHeader& header);
+  ProactiveAnt(Ptr<Packet> packet);
 
   ProactiveAnt() = default;
   virtual ~ProactiveAnt() = default;

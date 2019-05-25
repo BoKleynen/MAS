@@ -242,7 +242,12 @@ AntNetDevice::Device() {
 
 void
 AntNetDevice::Device(Ptr<NetDevice> device) {
-  m_impl -> m_device;
+  // the device changed, first unhook the traces
+  m_impl -> UnhookTraces(m_impl -> m_device);
+  // then set the new device
+  m_impl -> m_device = device;
+  // hook up the traces again
+  m_impl -> HookupTraces(device);
 }
 
 void

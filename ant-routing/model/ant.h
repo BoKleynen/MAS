@@ -3,6 +3,7 @@
 #define ANT_H
 
 #include "ns3/core-module.h"
+#include "ns3/packet.h"
 #include "ant-packet.h"
 #include <memory>
 
@@ -18,23 +19,12 @@ class Ant {
 public:
 
   Ant() = default;
-  Ant(const AntHeader& header);
 
-  virtual ~Ant();
+  virtual ~Ant() = default;
 
   // Each ant has a specific role to perform when it visits the node
   // it will mutate some data or log certain entries.
   virtual void Visit(AnthocnetRouting router) = 0;
-
-  // getter and setter
-  const AntHeader& Header();
-  void Header(const AntHeader& antHeader);
-
-private:
-  /**
-   * Header of the ant
-   */
-  AntHeader m_header;
 };
 
 class AntQueen {
@@ -43,7 +33,7 @@ public:
   ~AntQueen() = default;
 
   // queen creates a new ant from the given header
-  virtual std::shared_ptr<Ant> CreateFrom(const AntHeader& header) = 0;
+  virtual std::shared_ptr<Ant> CreateFrom(const AntTypeHeader& typeHeader, Ptr<Packet> packet) = 0;
 
   virtual AntType GetAntType() = 0;
 };
@@ -56,9 +46,9 @@ public:
     return AntSpecies::species;
   }
 
-  virtual std::shared_ptr<Ant> CreateFrom(const AntHeader& header) override {
+  virtual std::shared_ptr<Ant> CreateFrom(const AntTypeHeader& typeHeader, Ptr<Packet> packet) override {
     // if the header number corresponds to the class
-    if(!HasRightAntType(header)){
+    if(!HasRightAntType(typeHeader)){
       return nullptr;
     }
 
@@ -67,11 +57,11 @@ public:
     // TODO maybe add some automatic verification of the package besides
     // having the right type. For example a forward and may not have a backward count
     // different from zero
-    return std::make_shared<AntSpecies>(header);
+    return std::make_shared<AntSpecies>(packet);
   }
 
-  bool HasRightAntType(const AntHeader& header) {
-    return AntSpecies::species == header.GetAntType();
+  bool HasRightAntType(const AntTypeHeader& typeHeader) {
+    return AntSpecies::species == typeHeader.GetAntType();
   }
 };
 

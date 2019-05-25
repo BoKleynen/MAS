@@ -2,12 +2,12 @@
 #define ANT_HILL_H
 
 #include <memory>
+#include "ns3/packet.h"
 #include "ant-packet.h"
 
 namespace ns3 {
 namespace ant_routing {
 
-class AntHeader;
 class AntQueen;
 class Ant;
 
@@ -17,7 +17,7 @@ public:
   virtual ~AntHill();
 
   // creates an ant from the given header
-  std::shared_ptr<Ant> CreateFrom(const AntHeader& header);
+  std::shared_ptr<Ant> CreateFrom(const AntTypeHeader& typeHeader, Ptr<Packet> packet);
 
   void AddQueen(std::shared_ptr<AntQueen> queen);
 

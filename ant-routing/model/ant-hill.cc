@@ -19,13 +19,13 @@ AntHill::AntHill() : m_impl(std::make_shared<AntHillImpl>()) {}
 AntHill::~AntHill() {}
 
 std::shared_ptr<Ant>
-AntHill::CreateFrom(const AntHeader& header) {
-  auto queen  = m_impl -> m_queens.find(header.GetAntType());
+AntHill::CreateFrom(const AntTypeHeader& typeHeader, Ptr<Packet> packet) {
+  auto queen  = m_impl -> m_queens.find(typeHeader.GetAntType());
   if (queen == m_impl -> m_queens.end()) {
     return nullptr;
   }
 
-  return queen->second->CreateFrom(header);
+  return queen->second->CreateFrom(typeHeader, packet);
 }
 
 

@@ -39,6 +39,17 @@ private:
 
 std::ostream& operator<<(std::ostream& os, const PheromoneEntry& pe);
 
+// structure for expessing alternative routes
+// for a given destination, contianing both the next hop neighbor
+// and the pheromone value
+struct AlternativeRoute {
+  AlternativeRoute();
+  AlternativeRoute(Ipv4Address dest, Neighbor neighbor, PheromoneEntry pheromone);
+  Ipv4Address m_destination;
+  Neighbor m_neighbor;
+  PheromoneEntry m_pheromone;
+};
+
 // immutable proxy for a given Neighbor
 struct NeighborKey {
 public:
@@ -61,6 +72,7 @@ private:
 };
 
 bool operator<(const NeighborKey &lhs, const NeighborKey &rhs);
+bool operator==(const NeighborKey &lhs, const NeighborKey &rhs);
 
 /**
  * Class representing the routing table used to route ants and packages.
@@ -123,6 +135,10 @@ public:
   // boolean indicates whether there was an entry for the neighbor
   std::pair<Neighbor, bool> GetNeighbor(Ipv4Address addr);
 
+  // returns neighbor-pheromone pairs for all the destinations for which
+  // the given neighbor was the best route
+  std::vector<AlternativeRoute> BestAlternativesFor(const Neighbor& neighbor);
+
   // checks if the given address is the address of a neighbor node
   bool IsNeighbor(Neighbor neighbor);
   bool IsNeighbor(Ipv4Address addr);
@@ -166,6 +182,15 @@ private:
   // retrieves the pheromone table of a single neighbor. In case there is no
   // such entry, return a nullpointer
   std::shared_ptr<NeighborTable> GetNeighborTable(NeighborKey neighbor);
+
+  // returns true iff the given neighbor has the highest pheromone value for the
+  // given destination. Incase it doesnt have an entry, returns false
+  bool IsBestEntryFor(const Neighbor& neighbor, Ipv4Address destination);
+
+  // returns an alternative route in case the given neighbor was the best
+  // for the given destination. In case the neighbor was not the best entry or there was no alternative,
+  // returns false as the second argument.
+  std::pair<AlternativeRoute, bool> GetBestAlternativeFor(const Neighbor& neighbor, Ipv4Address destination);
 
   // calculates the total pheromone for a destination with a given
   // beta which serves to configure the explorative behavior of the packet.

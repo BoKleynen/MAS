@@ -6,6 +6,12 @@
 namespace ns3 {
 namespace ant_routing {
 
+// functions used to decrease the dependencies between the Neighbor manager
+// and the specifics of the implementation
+using NeighborFactoryFunction = std::function<Neighbor(Ipv4Address)>;
+using LinkFailureCallback = std::function<void(std::vector<LinkFailureNotification::Message>)>;
+using FailureDetectorFactoryFunction = std::function<std::shared_ptr<NeighborFailureDetector>(Neighbor)>;
+
 // class responsible for managing the activity levels of the neighbors
 // can remove/add delete entries from the Routing table based on inactivity of the neighbors
 // DESIGN DECISION: This responsibillity could also have been placed on the
@@ -13,21 +19,24 @@ namespace ant_routing {
 // manages the neighbors. (for example allows for a callback mechanism)
 class NeighborManager {
 public:
-
-  using FailureDetectorFactoryFunction = std::function<std::shared_ptr<NeighborFailureDetector>(Neighbor)>;
-
   // construction and destruction
   NeighborManager();
-  NeighborManager(const AntRoutingTable& routingTable,const AntNetDevice& device);
+  NeighborManager(const AntRoutingTable& routingTable, NeighborFactoryFunction neighborFactory, LinkFailureCallback failureCallback);
   virtual ~NeighborManager();
 
-  void HelloReceived(const AntHeader& Header);
+  void HelloReceived(const HelloHeader& Header);
 
   AntRoutingTable RoutingTable();
   void RoutingTable(AntRoutingTable table);
 
-  AntNetDevice Device();
-  void Device(AntNetDevice device);
+  NeighborFactoryFunction NeighborFactory();
+  void NeighborFactory(NeighborFactoryFunction neighborFactory);
+
+  LinkFailureCallback FailureCallback();
+  void FailureCallback(LinkFailureCallback failureCallback);
+
+  FailureDetectorFactoryFunction FailureDectectorFactory();
+  void FailureDetectorFactory(FailureDetectorFactoryFunction failureDetectorFactory);
 
   static Time HelloInterval();
   static void HelloInterval(Time interval);
@@ -39,11 +48,10 @@ private:
   NeighborManager(std::shared_ptr<NeighborManagerImpl> impl);
 
   Neighbor AddNeighbor(Ipv4Address address);
-  void HandleNeighborFailure(Neighbor neighbor);
+  void HandleNeighborFailure(const Neighbor& neighbor);
 
-  // configuration of the
+  // configuration
   static Time s_helloInterval;
-  static Time s_missingInterval;
   static FailureDetectorFactoryFunction s_defaultFailureDetectorFactory;
 
   // performs a checkup on the neighbors that are managed

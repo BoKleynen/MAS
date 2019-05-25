@@ -3,7 +3,23 @@
 namespace ns3 {
 namespace ant_routing {
 
-NeighborManager::FailureDetectorFactoryFunction NeighborManager::s_defaultFailureDetectorFactory
+// definition of static entities -----------------------------------------------
+Time NeighborManager::s_helloInterval = MilliSeconds(1000);
+
+Time
+NeighborManager::HelloInterval() {
+  return s_helloInterval;
+}
+
+void
+NeighborManager::HelloInterval(Time interval) {
+  s_helloInterval = interval;
+}
+
+
+// definition of NeighborManager -----------------------------------------------
+
+FailureDetectorFactoryFunction NeighborManager::s_defaultFailureDetectorFactory
   = [] (Neighbor neighbor) -> std::shared_ptr<NeighborFailureDetector>{
   // TODO tweak parameters?
   return MakeFailureDetector<SimpleFailureDetector>(neighbor);
@@ -11,34 +27,39 @@ NeighborManager::FailureDetectorFactoryFunction NeighborManager::s_defaultFailur
 
 struct NeighborManager::NeighborManagerImpl {
   NeighborManagerImpl();
-  NeighborManagerImpl( const AntRoutingTable& routingTable, const AntNetDevice& device, FailureDetectorFactoryFunction failureDetectorFactory);
+  NeighborManagerImpl( const AntRoutingTable& routingTable,NeighborFactoryFunction neighborFactor, LinkFailureCallback failureCallback, FailureDetectorFactoryFunction failureDetectorFactory);
   AntRoutingTable m_routingTable; // routing table to use
   AntNetDevice m_device; // device used by all the neighbors to send data
+  NeighborFactoryFunction m_neighborFactory;
+  LinkFailureCallback m_failureCallback;
   FailureDetectorFactoryFunction m_failureDetectorFactory; // to create failure detectors
 };
 
 NeighborManager::NeighborManagerImpl::NeighborManagerImpl()
-  : NeighborManagerImpl(AntRoutingTable(), AntNetDevice(), s_defaultFailureDetectorFactory) {
+  : NeighborManagerImpl(AntRoutingTable(), NeighborFactoryFunction() ,LinkFailureCallback(), s_defaultFailureDetectorFactory) {
 
 }
 
 NeighborManager::NeighborManagerImpl::NeighborManagerImpl(
   const AntRoutingTable& routingTable,
-  const AntNetDevice& device,
+  NeighborFactoryFunction neighborFactory,
+  LinkFailureCallback failureCallback,
   FailureDetectorFactoryFunction failureDetectorFactory)
     : m_routingTable(routingTable),
-      m_device(device),
-      m_failureDetectorFactory(failureDetectorFactory){
+      m_neighborFactory(neighborFactory),
+      m_failureCallback(failureCallback),
+      m_failureDetectorFactory(failureDetectorFactory)
+{
 
 }
 
-NeighborManager::NeighborManager(const AntRoutingTable& routingTable, const AntNetDevice& device)
-  : m_impl(std::make_shared<NeighborManagerImpl>(routingTable, device, s_defaultFailureDetectorFactory)){
+NeighborManager::NeighborManager(const AntRoutingTable& routingTable, NeighborFactoryFunction neighborFactory, LinkFailureCallback failureCallback)
+  : m_impl(std::make_shared<NeighborManagerImpl>(routingTable, neighborFactory, failureCallback, s_defaultFailureDetectorFactory)){
 
 }
 
 NeighborManager::NeighborManager() :
- NeighborManager(AntRoutingTable(), AntNetDevice()) {
+ m_impl(std::make_shared<NeighborManagerImpl>()) {
 
 }
 
@@ -50,8 +71,8 @@ NeighborManager::NeighborManager(std::shared_ptr<NeighborManagerImpl> impl)
 NeighborManager::~NeighborManager() {}
 
 void
-NeighborManager::HelloReceived(const AntHeader& header) {
-  auto sender = header.GetOrigin();
+NeighborManager::HelloReceived(const HelloHeader& header) {
+  auto sender = header.GetSource();
   auto neighborPair = m_impl -> m_routingTable.GetNeighbor(sender);
   auto neighbor = neighborPair.first;
 
@@ -63,7 +84,7 @@ NeighborManager::HelloReceived(const AntHeader& header) {
 
 Neighbor
 NeighborManager::AddNeighbor(Ipv4Address address) {
-  Neighbor neighbor(address, m_impl -> m_device);
+  Neighbor neighbor = m_impl -> m_neighborFactory(address);
   auto detector = m_impl->m_failureDetectorFactory(neighbor);
   // bind the current neighbor manager to the callback
   auto impl = m_impl; // needed to make the lambda work
@@ -80,11 +101,23 @@ NeighborManager::AddNeighbor(Ipv4Address address) {
 }
 
 void
-NeighborManager::HandleNeighborFailure(Neighbor neighbor) {
-  // TODO implement;
+NeighborManager::HandleNeighborFailure(const Neighbor& neighbor) {
+
+  auto alternatives = m_impl -> m_routingTable.BestAlternativesFor(neighbor);
+  m_impl -> m_routingTable.RemoveNeighbor(neighbor);
+
+  std::vector<LinkFailureNotification::Message> messages;
+
+  for(auto altIt = alternatives.begin(); altIt != alternatives.end(); altIt++) {
+    LinkFailureNotification::Message message;
+    message.dest = altIt -> m_destination;
+    message.bestTimeEstimate = altIt -> m_pheromone.TimeEstimate();
+    message.bestHopEstimate = altIt -> m_pheromone.HopCount();
+    messages.push_back(message);
+  }
+
+  m_impl -> m_failureCallback(messages);
 }
-
-
 
 AntRoutingTable
 NeighborManager::RoutingTable() {
@@ -96,13 +129,29 @@ NeighborManager::RoutingTable(AntRoutingTable table) {
   m_impl -> m_routingTable = table;
 }
 
-AntNetDevice
-NeighborManager::Device() {
-  return m_impl -> m_device;
+
+NeighborFactoryFunction NeighborManager::NeighborFactory() {
+  return m_impl -> m_neighborFactory;
 }
-void
-NeighborManager::Device(AntNetDevice device) {
-  m_impl -> m_device = device;
+
+void NeighborManager::NeighborFactory(NeighborFactoryFunction neighborFactory) {
+  m_impl -> m_neighborFactory = neighborFactory;
+}
+
+LinkFailureCallback NeighborManager::FailureCallback() {
+  return m_impl -> m_failureCallback;
+}
+
+void NeighborManager::FailureCallback(LinkFailureCallback failureCallback) {
+  m_impl -> m_failureCallback = failureCallback;
+}
+
+FailureDetectorFactoryFunction NeighborManager::FailureDectectorFactory() {
+  return m_impl -> m_failureDetectorFactory;
+}
+
+void NeighborManager::FailureDetectorFactory(FailureDetectorFactoryFunction failureDetectorFactory) {
+  m_impl -> m_failureDetectorFactory = failureDetectorFactory;
 }
 
 } // namespace ant_routing

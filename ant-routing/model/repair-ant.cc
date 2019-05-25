@@ -4,8 +4,7 @@
 namespace ns3 {
 namespace ant_routing {
 
-RepairAnt::RepairAnt(const AntHeader& header)
-  : Ant(header) { }
+RepairAnt::RepairAnt(Ptr<Packet> packet) { }
 
 void
 RepairAnt::Visit(AnthocnetRouting router) {

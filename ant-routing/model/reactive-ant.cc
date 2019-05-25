@@ -7,8 +7,7 @@ NS_LOG_COMPONENT_DEFINE("ReactiveAnt");
 
 namespace ant_routing {
 
-ReactiveAnt::ReactiveAnt(const AntHeader& header)
-  : Ant(header) {
+ReactiveAnt::ReactiveAnt(Ptr<Packet> packet) {
 }
 
 void ReactiveAnt::Visit(AnthocnetRouting router){
@@ -18,13 +17,16 @@ void ReactiveAnt::Visit(AnthocnetRouting router){
 //Queen implementation ---------------------------------------------------------
 double AntQueenImpl<ReactiveAnt>::s_admissionRatio = 1.5;
 
-std::shared_ptr<Ant> AntQueenImpl<ReactiveAnt>::CreateFrom(const AntHeader& header) {
-  if(!HasRightAntType(header) || !CanBeAdmitted(header)) {
+std::shared_ptr<Ant> AntQueenImpl<ReactiveAnt>::CreateFrom(const AntTypeHeader& typeHeader, Ptr<Packet> packet) {
+  AntHeader header;
+  packet -> PeekHeader(header);
+
+  if(!HasRightAntType(typeHeader) || !CanBeAdmitted(header)) {
     return nullptr;
   }
 
   UpdateGenerationData(header);
-  return std::make_shared<ReactiveAnt>(header);
+  return std::make_shared<ReactiveAnt>(packet);
 }
 
 AntType AntQueenImpl<ReactiveAnt>::GetAntType() {
@@ -73,8 +75,8 @@ bool AntQueenImpl<ReactiveAnt>::IsBetterAnt(const AntHeader& header) {
   return false;
 }
 
-bool AntQueenImpl<ReactiveAnt>::HasRightAntType(const AntHeader& header) {
-  return ReactiveAnt::species == header.GetAntType();
+bool AntQueenImpl<ReactiveAnt>::HasRightAntType(const AntTypeHeader& typeHeader) {
+  return ReactiveAnt::species == typeHeader.GetAntType();
 }
 
 

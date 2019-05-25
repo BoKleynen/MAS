@@ -50,9 +50,13 @@ operator<<(std::ostream& os, const PheromoneEntry& pe) {
   return os;
 }
 
-// NeighborKey Implementation ------------------------------------------------
+// AlternativeRoute implementation ---------------------------------------------
+AlternativeRoute::AlternativeRoute()
+  : AlternativeRoute(Ipv4Address(), Neighbor(), PheromoneEntry()) { }
 
-
+AlternativeRoute::AlternativeRoute(Ipv4Address dest, Neighbor neighbor, PheromoneEntry pheromone)
+  : m_destination(dest), m_neighbor(neighbor), m_pheromone(pheromone) { }
+// NeighborKey Implementation --------------------------------------------------
 NeighborKey::NeighborKey() : m_addr(Ipv4Address()), m_neighbor (nullptr) { }
 NeighborKey::NeighborKey(Neighbor neighbor) : m_addr(neighbor.Address()), m_neighbor(std::make_shared<Neighbor>(neighbor)) { }
 NeighborKey::NeighborKey(Ipv4Address addr) : m_addr(addr), m_neighbor(nullptr) { }
@@ -77,6 +81,10 @@ bool operator<(const NeighborKey &lhs, const NeighborKey &rhs) {
   return lhs.Address() < rhs.Address();
 }
 
+bool operator==(const NeighborKey &lhs, const NeighborKey& rhs) {
+  return !(lhs < rhs || rhs < lhs);
+}
+
 
 // AntRoutingTable definition --------------------------------------------------
 // static variables:
@@ -96,7 +104,7 @@ AntRoutingTable::RouteTo(const Ipv4Header& ipv4h) {
 
 Ptr<Ipv4Route>
 AntRoutingTable::RouteTo(const AntHeader& ah){
-  return RouteTo(ah.GetOrigin(), ah.GetDestination(), AntBeta());
+  return RouteTo(ah.GetSource(), ah.GetDestination(), AntBeta());
 }
 
 Ptr<Ipv4Route>
@@ -136,7 +144,7 @@ AntRoutingTable::RoutePacket(const Ipv4Header& header) {
 
 Neighbor
 AntRoutingTable::RouteAnt(const AntHeader& header) {
-  return RouteToNeighbor(header.GetOrigin(), header.GetDestination(), AntBeta());
+  return RouteToNeighbor(header.GetSource(), header.GetDestination(), AntBeta());
 }
 
 Neighbor
@@ -170,7 +178,7 @@ AntRoutingTable::RouteToNeighbor(Ipv4Address source, Ipv4Address dest, double be
 
 std::vector<Ptr<Ipv4Route>>
 AntRoutingTable::NoPheromoneRoutes(const AntHeader& ah) {
-  Ipv4Address source = ah.GetOrigin();
+  Ipv4Address source = ah.GetSource();
   Ipv4Address destination = ah.GetDestination();
   std::vector<Ptr<Ipv4Route>> routes;
   auto neighbors = Neighbors();
@@ -204,7 +212,7 @@ AntRoutingTable::NoPheromoneNeighbors(const AntHeader& header) {
 
 std::vector<Ptr<Ipv4Route>>
 AntRoutingTable::BroadcastRouteTo(const AntHeader& ah) {
-  Ipv4Address source = ah.GetOrigin();
+  Ipv4Address source = ah.GetSource();
   Ipv4Address destination = ah.GetDestination();
   std::vector<Ptr<Ipv4Route>> routes;
   auto neighbors = Neighbors();
@@ -338,6 +346,71 @@ std::pair<Neighbor, bool> AntRoutingTable::GetNeighbor(Ipv4Address addr) {
   }
 
   return std::make_pair(Neighbor(), false);
+}
+
+std::vector<AlternativeRoute>
+AntRoutingTable::BestAlternativesFor(const Neighbor& neighbor) {
+
+  std::vector<AlternativeRoute> alternatives;
+
+  auto neighborTable = GetNeighborTable(neighbor);
+  for(auto destEntryIt = neighborTable->begin(); destEntryIt != neighborTable->end(); destEntryIt++) {
+    auto alt = GetBestAlternativeFor(neighbor, destEntryIt->first);
+
+    if(alt.second) {
+      alternatives.push_back(alt.first);
+    }
+  }
+
+  return alternatives;
+}
+
+bool
+AntRoutingTable::IsBestEntryFor(const Neighbor& neighbor, Ipv4Address destination) {
+  auto neighborEntry = GetPheromone(neighbor.Address(), destination);
+
+  if(neighborEntry == nullptr) {
+    return false;
+  }
+
+  auto neighbors = Neighbors();
+  double neighborValue = neighborEntry->Value();
+
+  for(auto neighborIt = neighbors.begin(); neighborIt != neighbors.end(); neighborIt++) {
+
+    if(neighborIt -> Get() == neighbor) {
+      continue;
+    }
+
+    auto entry = GetPheromone(neighborIt->Address(), destination);
+    if (entry != nullptr && (entry -> Value()) > neighborValue) {
+      return false;
+    }
+  }
+  return true;
+}
+
+std::pair<AlternativeRoute, bool>
+AntRoutingTable::GetBestAlternativeFor(const Neighbor& neighbor, Ipv4Address destination) {
+  auto neighbors = Neighbors();
+
+  if (!IsBestEntryFor(neighbor, destination)) {
+    return std::make_pair(AlternativeRoute(), false);
+  }
+
+  AlternativeRoute bestAlt;
+
+  for(auto neighborIt =  neighbors.begin(); neighborIt != neighbors.end(); neighborIt++) {
+    if(neighborIt -> Get() == neighbor) {
+      continue;
+    }
+    auto entry = GetPheromone(neighborIt->Address(), destination);
+    if (entry != nullptr && (entry -> Value()) > bestAlt.m_pheromone.Value()) {
+      bestAlt = AlternativeRoute(destination, *neighborIt, *entry);
+    }
+  }
+
+  return std::make_pair(bestAlt, bestAlt.m_pheromone.Value() != 0.0);
 }
 
 bool AntRoutingTable::IsNeighbor(Ipv4Address addr) {

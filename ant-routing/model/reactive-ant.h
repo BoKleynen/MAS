@@ -8,7 +8,7 @@ namespace ant_routing {
 class ReactiveAnt : public Ant {
 public:
 
-  ReactiveAnt(const AntHeader& header);
+  ReactiveAnt(Ptr<Packet> packet);
   ReactiveAnt() = default;
 
   virtual ~ReactiveAnt() = default;
@@ -20,14 +20,14 @@ public:
 template<>
 class AntQueenImpl<ReactiveAnt> : public AntQueen {
 public:
-  virtual std::shared_ptr<Ant> CreateFrom(const AntHeader& header) override;
+  virtual std::shared_ptr<Ant> CreateFrom(const AntTypeHeader& typeHeader, Ptr<Packet>) override;
   virtual AntType GetAntType() override;
 
   bool CanBeAdmitted(const AntHeader& header);
 
   void UpdateGenerationData(const AntHeader& header);
   bool IsBetterAnt(const AntHeader& header);
-  bool HasRightAntType(const AntHeader& header);
+  bool HasRightAntType(const AntTypeHeader& typeHeader);
 
   uint32_t m_generation;
   uint8_t m_bestHopCount;

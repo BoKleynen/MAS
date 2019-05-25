@@ -8,6 +8,7 @@
 #include "reactive-ant.h"
 #include "repair-ant.h"
 #include "ant-routing-table.h"
+#include "neighbor-manager.h"
 
 namespace ns3 {
 
@@ -20,8 +21,13 @@ struct AnthocnetRouting::AnthocnetImpl {
 
   AnthocnetImpl();
 
+  // the sole device used for communication with the outside world
+  AntNetDevice m_device;
+  // the routing table used by the algorithm to route packets
   AntRoutingTable m_routingTable;
-
+  // managing entity for all the neighbors
+  NeighborManager m_neighborManager;
+  // ant hill for creating ants from incoming packets
   AntHill m_antHill;
   // the address of the wifi interface attached
   Ipv4InterfaceAddress m_ifAddress;
@@ -37,12 +43,19 @@ struct AnthocnetRouting::AnthocnetImpl {
 };
 
 AnthocnetRouting::AnthocnetImpl::AnthocnetImpl()
-  : m_antHill(AntHill()),
+  : m_device(AntNetDevice()),
+    m_routingTable(AntRoutingTable()),
+    m_neighborManager(NeighborManager()),
+    m_antHill(AntHill()),
     m_ifAddress(Ipv4InterfaceAddress()),
     m_socket(Ptr<Socket>()),
     m_broadcastSocket(Ptr<Socket>()),
     m_loopback(Ptr<NetDevice>()),
     m_ipv4(Ptr<Ipv4>()) {
+
+  // partly initialize the neighbor manager
+  // other things have to be added later when specifics become available
+  m_neighborManager.RoutingTable(m_routingTable);
 
   m_antHill.AddQueen(std::make_shared<BackwardQueen>());
   m_antHill.AddQueen(std::make_shared<ProactiveQueen>());
@@ -98,6 +111,10 @@ bool AnthocnetRouting::RouteInput  (Ptr<const Packet> p,
 void AnthocnetRouting::NotifyInterfaceUp (uint32_t interface) {
   NS_LOG_UNCOND("Interface up: " << interface);
 
+  // once we have registered the device, we do not want an extra device to be attached.
+  // TODO maybe just ignore instead of stopping the simulation
+  NS_ASSERT(m_impl -> m_device.Device() == Ptr<NetDevice>());
+
   Ptr<Ipv4L3Protocol> ipv4l3 = m_impl -> m_ipv4 -> GetObject<Ipv4L3Protocol> ();
   if(!ipv4l3->IsUp(interface)) {
     NS_LOG_UNCOND("interface is down");
@@ -118,29 +135,60 @@ void AnthocnetRouting::NotifyInterfaceUp (uint32_t interface) {
   }
 
   m_impl -> m_ifAddress = ifAddress;
+  m_impl -> m_device.Device(ipv4l3->GetNetDevice(interface));
 
-  // socket for unicast traffic
+  InstallSockets();
+  InstallNeighborFactory();
+  InstallLinkFailureCallback();
+
+}
+
+void AnthocnetRouting::InstallSockets() {
+
+  //TODO bind sockets
+
+  auto ifAddress = m_impl -> m_ifAddress;
+  auto device = m_impl -> m_device.Device();
+
   auto socket = Socket::CreateSocket(GetObject<Node>(), UdpSocketFactory::GetTypeId());
   NS_ASSERT (socket != 0);
-  //TODO bind to the anthocnet application
-  socket -> BindToNetDevice(ipv4l3->GetNetDevice(interface));
+  socket -> SetRecvCallback(MakeCallback(&AnthocnetRouting::ReceiveAnt, this));
+  socket -> BindToNetDevice(device);
   socket -> Bind(InetSocketAddress(ifAddress.GetLocal(), ANTHOCNET_PORT));
   socket -> SetAllowBroadcast(false);
-
   m_impl -> m_socket = socket;
 
-  //broadcast socket:
   auto broadcastSocket = Socket::CreateSocket (GetObject<Node> (), UdpSocketFactory::GetTypeId());
   NS_ASSERT(broadcastSocket != 0);
-  //TODO set anthocnet application
-  broadcastSocket -> BindToNetDevice(ipv4l3->GetNetDevice(interface));
+  broadcastSocket -> SetRecvCallback(MakeCallback(&AnthocnetRouting::ReceiveAnt, this));
+  broadcastSocket -> BindToNetDevice(device);
   broadcastSocket -> Bind(InetSocketAddress(ifAddress.GetBroadcast(), ANTHOCNET_PORT));
   broadcastSocket -> SetAllowBroadcast(true);
   broadcastSocket -> SetIpRecvTtl(true);
-
   m_impl -> m_broadcastSocket = broadcastSocket;
+}
 
-  // TODO add the device associated with the new device to the neighbor table
+
+void AnthocnetRouting::InstallNeighborFactory() {
+  auto device = m_impl -> m_device;
+  m_impl -> m_neighborManager.NeighborFactory([device] (Ipv4Address addr) -> Neighbor {
+    return Neighbor(addr, device);
+  });
+}
+
+void AnthocnetRouting::InstallLinkFailureCallback() {
+  // note: need to copy the variables, will otherwise create a
+  // reference loop which in turn will lead to a memory leak
+  auto broadcastSocket = m_impl -> m_broadcastSocket;
+  auto ifAddress = m_impl -> m_ifAddress;
+  m_impl -> m_neighborManager.FailureCallback([broadcastSocket, ifAddress] (std::vector<LinkFailureNotification::Message> messages) {
+    LinkFailureNotification notification(ifAddress.GetLocal(), messages);
+    Ptr<Packet> packet = Create<Packet>();
+    packet -> AddHeader(notification);
+    AntTypeHeader typeHeader(AntType::LinkFailureAnt);
+    packet -> AddHeader(typeHeader);
+    broadcastSocket -> SendTo(packet, 0, InetSocketAddress(ifAddress.GetBroadcast(), ANTHOCNET_PORT));
+  });
 }
 
 void AnthocnetRouting::NotifyInterfaceDown (uint32_t interface) {
@@ -183,13 +231,13 @@ AnthocnetRouting::ReceiveAnt(Ptr<Socket> socket) {
   // InetSockAddress inetSourceAddr = InetSockAddress::ConvertFrom(sourceAddr);
   // Ipv4Address sender = inetSourceAddr.GetIpv4();
   // Ipv4Address receiver = m_impl -> m_ifAddress.GetLocal();
-  AntHeader antHeader;
-  packet->RemoveHeader(antHeader);
+  AntTypeHeader typeHeader;
+  packet->RemoveHeader(typeHeader);
   // TODO integrity check? see if we received garbage?
 
   // TODO add methods to check if ttl is right etc, where are we going to place this
   // responsibility?
-  auto ant = m_impl->m_antHill.CreateFrom(antHeader);
+  auto ant = m_impl->m_antHill.CreateFrom(typeHeader, packet);
   if( ant == nullptr) {
     NS_LOG_WARN("Broken package received at: " << m_impl -> m_ifAddress << packet);
     return;

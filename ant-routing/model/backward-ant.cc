@@ -7,8 +7,7 @@
 namespace ns3 {
 namespace ant_routing {
 
-BackwardAnt::BackwardAnt(const AntHeader& header)
-  : Ant(header) {
+BackwardAnt::BackwardAnt(Ptr<Packet> packet) {
 
 }
 

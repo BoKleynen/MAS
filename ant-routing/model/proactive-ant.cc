@@ -4,8 +4,7 @@
 namespace ns3 {
 namespace ant_routing {
 
-ProactiveAnt::ProactiveAnt(const AntHeader& header)
-  : Ant(header) {
+ProactiveAnt::ProactiveAnt(Ptr<Packet> packet) {
 
 }
 

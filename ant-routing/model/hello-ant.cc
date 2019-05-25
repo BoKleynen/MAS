@@ -3,8 +3,7 @@
 namespace ns3 {
 namespace ant_routing {
 
-HelloAnt::HelloAnt(const AntHeader& header)
-  : Ant(header) { }
+HelloAnt::HelloAnt(Ptr<Packet> packet) { }
 
 
 void

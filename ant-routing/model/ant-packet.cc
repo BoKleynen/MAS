@@ -7,85 +7,70 @@
 namespace ns3 {
 namespace ant_routing {
 
-AntNetHeader::AntNetHeader ()
-  : m_antType (AntType::ReactiveForwardAnt),
-    m_origin (Ipv4Address ())
+// AntTypeHeader definition -----------------------------------------------------
+
+AntTypeHeader::AntTypeHeader ()
+  : m_antType (AntType::ReactiveForwardAnt)
 {
 }
 
-AntNetHeader::AntNetHeader (AntType antType, Ipv4Address origin)
-  : m_antType (antType),
-    m_origin (origin)
+AntTypeHeader::AntTypeHeader (AntType antType)
+  : m_antType (antType)
 {
 }
 
 TypeId
-AntNetHeader::GetTypeId ()
+AntTypeHeader::GetTypeId ()
 {
-  static TypeId tid = TypeId ("ns3::ant_routing::AntNetHeader")
+  static TypeId tid = TypeId ("ns3::ant_routing::AntTypeHeader")
     .SetParent<Header> ()
     .SetGroupName ("AntRouting")
-    .AddConstructor<AntNetHeader> ();
+    .AddConstructor<AntTypeHeader> ();
   return tid;
 }
 
 TypeId
-AntNetHeader::GetInstanceTypeId () const
+AntTypeHeader::GetInstanceTypeId () const
 {
   return GetTypeId ();
 }
 
 uint32_t
-AntNetHeader::GetSerializedSize () const
+AntTypeHeader::GetSerializedSize () const
 {
-  return sizeof(AntType) + IPV4_ADDRESS_SIZE;
+  return sizeof(AntType);
 }
 
 void
-AntNetHeader::Serialize (Buffer::Iterator i) const
+AntTypeHeader::Serialize (Buffer::Iterator i) const
 {
   i.WriteU8 (static_cast<uint8_t>(m_antType));
-  WriteTo(i, m_origin);
 }
 
 uint32_t
-AntNetHeader::Deserialize (Buffer::Iterator i)
+AntTypeHeader::Deserialize (Buffer::Iterator i)
 {
   auto start = i;
   m_antType = static_cast<AntType>(i.ReadU8 ());
-  ReadFrom (i, m_origin);
-
   uint32_t dist = i.GetDistanceFrom (start);
   NS_ASSERT (dist == GetSerializedSize ());
   return dist;
 }
 
 AntType
-AntNetHeader::GetAntType () const
+AntTypeHeader::GetAntType () const
 {
     return m_antType;
 }
 
-Ipv4Address
-AntNetHeader::GetOrigin () const
-{
-  return m_origin;
-}
-
 void
-AntNetHeader::SetAntType (AntType antType)
+AntTypeHeader::SetAntType (AntType antType)
 {
   m_antType = antType;
 }
 
 void
-AntNetHeader::SetOrigin (Ipv4Address origin)
-{
-  m_origin = origin;
-}
-
-void
-AntNetHeader::Print (std::ostream &os) const
+AntTypeHeader::Print (std::ostream &os) const
 {
   os << "hello \n";
 }
@@ -95,11 +80,12 @@ AntNetHeader::Print (std::ostream &os) const
 AntHeader::AntHeader (std::vector<Ipv4Address> visitedNodes,
           uint8_t hopCount, uint8_t broadcastCount,
           uint8_t backwardCount, uint32_t generation,
-          Ipv4Address dst, Time timeEstimate)
+          Ipv4Address source, Ipv4Address dst, Time timeEstimate)
   : m_hopCount (hopCount),
     m_broadcastCount (broadcastCount),
     m_backwardCount (backwardCount),
     m_generation (generation),
+    m_source(source),
     m_dst (dst),
     m_timeEstimate (timeEstimate),
     m_visitedNodes (visitedNodes)
@@ -136,10 +122,10 @@ uint32_t
 AntHeader::GetSerializedSize () const
 {
   return sizeof(AntType)
-    + 3*sizeof(uint8_t)
-    + sizeof(uint32_t)
-    + sizeof(Time)
-    + (1 + m_hopCount) * IPV4_ADDRESS_SIZE;  // (2 + (m_hopCount - 1))
+    + 3*sizeof(uint8_t) // hop count + broadcast count + backwardCount
+    + sizeof(uint32_t) // generation
+    + sizeof(Time) // time estimate
+    + (2 + m_hopCount) * IPV4_ADDRESS_SIZE;  // (2 + (m_hopCount - 1))
 }
 
 void
@@ -153,6 +139,7 @@ AntHeader::Serialize (Buffer::Iterator i) const
   // https://www.nsnam.org/doxygen/lte-rlc-tag_8cc_source.html#l00066
   auto nanoTime = m_timeEstimate.GetNanoSeconds();
   i.Write((const uint8_t *) &(nanoTime), sizeof(uint64_t));
+  WriteTo(i, m_source);
   WriteTo(i, m_dst);
   for (auto addr : m_visitedNodes) {
     WriteTo (i, addr);
@@ -171,6 +158,7 @@ AntHeader::Deserialize (Buffer::Iterator start)
   int64_t rcvdTime;
   i.Read ((uint8_t *)&rcvdTime, 8);
   m_timeEstimate = NanoSeconds (rcvdTime);
+  ReadFrom(i, m_source);
   ReadFrom (i, m_dst);
   Ipv4Address addr;
   for (int index=1; index < m_hopCount; index++) { // (m_hopCount - 1) visited nodes
@@ -201,6 +189,9 @@ uint8_t AntHeader::GetBackwardCount() const {
 uint32_t AntHeader::GetGeneration() const {
   return m_generation;
 }
+Ipv4Address AntHeader::GetSource() const {
+  return m_source;
+}
 Ipv4Address AntHeader::GetDestination() const {
   return m_dst;
 }
@@ -223,6 +214,9 @@ void AntHeader::SetBackwardCount(uint8_t backwardCount) {
 void AntHeader::SetGeneration(uint32_t generation) {
   m_generation = generation;
 }
+void AntHeader::SetSource(Ipv4Address source) {
+  m_source = source;
+}
 void AntHeader::SetDestination(Ipv4Address dest) {
   m_dst = dest;
 }
@@ -239,16 +233,56 @@ void AntHeader::SetVisitedNodes(std::vector<Ipv4Address>&& visited) {
 void AntHeader::AddVisitedNode(Ipv4Address addr) {
   m_visitedNodes.push_back(addr);
 }
+// Hello header definition -----------------------------------------------------
 
-// --------------- LinkFailureNotification ---------------
+HelloHeader::HelloHeader() : m_source(Ipv4Address()) { }
+
+HelloHeader::HelloHeader(Ipv4Address source) : m_source(source) { }
+
+TypeId HelloHeader::GetTypeId () {
+  static TypeId tid = TypeId ("ns3::ant_routing::HelloHeader")
+    .SetParent<Header> ()
+    .SetGroupName ("AntRouting")
+    .AddConstructor<LinkFailureNotification>();
+  return tid;
+}
+
+TypeId HelloHeader::GetInstanceTypeId () const {
+  return GetTypeId();
+}
+uint32_t HelloHeader::GetSerializedSize () const {
+  return IPV4_ADDRESS_SIZE;
+}
+void HelloHeader::Serialize (Buffer::Iterator i) const {
+  WriteTo(i, m_source);
+}
+uint32_t HelloHeader::Deserialize (Buffer::Iterator start) {
+  auto i = start;
+  ReadFrom(i, m_source);
+  uint32_t dist = i.GetDistanceFrom(start);
+  NS_ASSERT(dist == GetSerializedSize());
+  return dist;
+}
+void HelloHeader::Print (std::ostream &os) const {
+  os << "lalalala can't hear you!";
+}
+
+Ipv4Address HelloHeader::GetSource() const {
+  return m_source;
+}
+void HelloHeader::SetSource(Ipv4Address source) {
+  m_source = source;
+}
+
+// LinkFailureNotification Definition ------------------------------------------
 
 LinkFailureNotification::LinkFailureNotification ()
-  : m_messages (std::vector<Message> ()) 
+  : m_source(Ipv4Address()), m_messages (std::vector<Message> ())
 {
 }
 
-LinkFailureNotification::LinkFailureNotification (std::vector<Message> messages)
-  : m_messages (messages) 
+LinkFailureNotification::LinkFailureNotification (Ipv4Address source, std::vector<Message> messages)
+  : m_source(source), m_messages (messages)
 {
 }
 
@@ -256,7 +290,7 @@ TypeId
 LinkFailureNotification::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::ant_routing::LinkFailureNotification")
-    .SetParent<AntNetHeader> ()
+    .SetParent<Header> ()
     .SetGroupName ("AntRouting")
     .AddConstructor<LinkFailureNotification> ();
   return tid;
@@ -277,6 +311,7 @@ LinkFailureNotification::GetSerializedSize () const
 void
 LinkFailureNotification::Serialize (Buffer::Iterator i) const
 {
+  WriteTo(i, m_source);
   i.WriteU8 (m_messages.size());
   for (auto iter = m_messages.begin (); iter != m_messages.end (); iter++)
   {
@@ -289,6 +324,7 @@ LinkFailureNotification::Deserialize (Buffer::Iterator start)
 {
   auto i = start;
 
+  ReadFrom(i, m_source);
   auto n_messages = i.ReadU8 ();
   for (int n = 1; n < n_messages; n++) {
     auto message = Message ();
@@ -305,6 +341,21 @@ LinkFailureNotification::Print (std::ostream &os) const
 {
   os << "bla bla bla";
 }
+
+Ipv4Address LinkFailureNotification::GetSource() const {
+  return m_source;
+}
+std::vector<LinkFailureNotification::Message> LinkFailureNotification::GetMessages() {
+  return m_messages;
+}
+
+void LinkFailureNotification::SetSource(Ipv4Address source) {
+  m_source = source;
+}
+void LinkFailureNotification::SetMessages(std::vector<Message> messages) {
+  m_messages = messages;
+}
+
 
 // --------------- LinkFailureNotification::Message ---------------
 

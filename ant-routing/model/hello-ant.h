@@ -8,10 +8,10 @@ namespace ant_routing {
 
 class HelloAnt : public Ant {
   HelloAnt() = default;
-  HelloAnt(const AntHeader& header);
+  HelloAnt(Ptr<Packet> packet);
   ~HelloAnt() = default;
 
-  virtual void Visit(const AntHeader& header) override;
+  virtual void Visit(AnthocNetRouting router) override;
 
   static constexpr AntType species = AntType::HelloAnt;
 };

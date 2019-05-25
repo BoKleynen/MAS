@@ -115,6 +115,12 @@ private:
   // callback for when a message is received at the routing protocol socket
   void ReceiveAnt(Ptr<Socket> socket);
 
+  // install the sockets needed by the anthocnet routing
+  void InstallSockets();
+  // used to make the life of the neighbor monitor easier
+  void InstallNeighborFactory();
+  void InstallLinkFailureCallback();
+
   // constants:
   static constexpr const char* localhost = "127.0.0.1";
 

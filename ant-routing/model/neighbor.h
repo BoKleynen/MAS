@@ -65,6 +65,7 @@ private:
 // inequality operator, allows the DefaultNeighbor type to be a key of a
 // std::map
 bool operator<(const Neighbor& lhs, const Neighbor& rhs);
+bool operator==(const Neighbor& lhs, const Neighbor& rhs);
 std::ostream& operator<<(std::ostream& os, const Neighbor& nb);
 
 // base class for neighbor failure detection, outsources the fialure
@@ -83,7 +84,7 @@ public:
 
   // function to be implemented by the implementor.
   // can update the appropriate data (structures) inside the failure handler
-  virtual void HelloReceived(const AntNetHeader& header)= 0;
+  virtual void HelloReceived(const HelloHeader& header)= 0;
 
   // registers a callback. This function will be called when failure of a
   // neighbor is detected
@@ -145,7 +146,7 @@ public:
   SimpleFailureDetector(Neighbor neighhor, uint8_t maxMissed, Time helloInterval);
   virtual ~SimpleFailureDetector() = default;
 
-  virtual void HelloReceived(const AntNetHeader& header) override;
+  virtual void HelloReceived(const HelloHeader& header) override;
 
   uint8_t MaxMissed();
   void MaxMissed(uint8_t missedCount);

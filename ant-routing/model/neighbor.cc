@@ -101,6 +101,10 @@ bool operator<(const Neighbor& lhs, const Neighbor& rhs) {
   return lhs.Address() < rhs.Address();
 }
 
+bool operator==(const Neighbor& lhs, const Neighbor& rhs) {
+  return !(lhs < rhs || rhs < lhs);
+}
+
 std::ostream& operator<<(std::ostream& os, const Neighbor& nb) {
   os << "Neighbor { address: " << nb.Address() << "}";
   return os;
@@ -215,7 +219,7 @@ SimpleFailureDetector::SimpleFailureDetector(Neighbor neighbor, uint8_t maxMisse
 }
 
 void
-SimpleFailureDetector::HelloReceived(const AntNetHeader& header) {
+SimpleFailureDetector::HelloReceived(const HelloHeader& header) {
   m_latestHello = Simulator::Now();
 }
 

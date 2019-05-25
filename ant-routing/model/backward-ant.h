@@ -11,7 +11,7 @@ namespace ant_routing {
  */
 class BackwardAnt : public Ant {
 public:
-  BackwardAnt(const AntHeader& header);
+  BackwardAnt(Ptr<Packet> packet);
   BackwardAnt() = default;
   virtual ~BackwardAnt() = default;
 

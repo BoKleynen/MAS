@@ -29,7 +29,7 @@ void AntRoutingTableTestCase1::DoRun(void) {
   Ipv4Address neighbor("0.0.0.0");
   Ipv4Address destination("0.0.0.1");
   AntHeader ah;
-  ah.SetOrigin(Ipv4Address("192.168.0.1"));
+  ah.SetSource(Ipv4Address("192.168.0.1"));
   ah.SetDestination(destination);
   // 0 == nullptr... wont compile otherwise :/
   NS_TEST_ASSERT_MSG_EQ(rt.GetPheromone(neighbor, destination), 0, "The table should be empty");

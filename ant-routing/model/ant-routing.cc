@@ -4,18 +4,20 @@
 #include "ant-hill.h"
 #include "ant.h"
 #include "backward-ant.h"
+#include "hello-ant.h"
 #include "proactive-ant.h"
 #include "reactive-ant.h"
 #include "repair-ant.h"
 #include "ant-routing-table.h"
 #include "neighbor-manager.h"
-
+#include "ns3/nstime.h"
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("AnthocnetRoutingProtocol");
 
 namespace ant_routing {
 
+Time AnthocnetRouting::s_helloInterval = MilliSeconds(3000);
 
 struct AnthocnetRouting::AnthocnetImpl {
 
@@ -31,6 +33,8 @@ struct AnthocnetRouting::AnthocnetImpl {
   AntHill m_antHill;
   // the address of the wifi interface attached
   Ipv4InterfaceAddress m_ifAddress;
+  // Timer for the hello messages
+  Timer m_helloTimer;
   // the socket used for unicast messages in UDP
   Ptr<Socket> m_socket;
   // broadcast socket used for unicast messages in UDP
@@ -48,6 +52,7 @@ AnthocnetRouting::AnthocnetImpl::AnthocnetImpl()
     m_neighborManager(NeighborManager()),
     m_antHill(AntHill()),
     m_ifAddress(Ipv4InterfaceAddress()),
+    m_helloTimer(Timer::CANCEL_ON_DESTROY),
     m_socket(Ptr<Socket>()),
     m_broadcastSocket(Ptr<Socket>()),
     m_loopback(Ptr<NetDevice>()),
@@ -61,7 +66,9 @@ AnthocnetRouting::AnthocnetImpl::AnthocnetImpl()
   m_antHill.AddQueen(std::make_shared<ProactiveQueen>());
   m_antHill.AddQueen(std::make_shared<ReactiveQueen>());
   m_antHill.AddQueen(std::make_shared<RepairQueen>());
+  m_antHill.AddQueen(std::make_shared<HelloQueen>());
 }
+
 
 
 // ensures that the object is already registered...  NS stuff
@@ -86,6 +93,18 @@ AnthocnetRouting::AnthocnetRouting() : m_impl(std::make_shared<AnthocnetImpl>())
 
 AnthocnetRouting::~AnthocnetRouting() { }
 
+Ipv4Address AnthocnetRouting::GetAddress() {
+  return m_impl -> m_ifAddress.GetLocal();
+}
+
+NeighborManager AnthocnetRouting::GetNeighborManager() {
+  return m_impl->m_neighborManager;
+}
+
+AntRoutingTable AnthocnetRouting::GetRoutingTable() {
+  return m_impl -> m_routingTable;
+}
+
 // we route all the output back to the device such that it becomes
 // ingress traffic and be queued.
 Ptr<Ipv4Route> AnthocnetRouting::RouteOutput (Ptr<Packet> p,
@@ -98,6 +117,9 @@ Ptr<Ipv4Route> AnthocnetRouting::RouteOutput (Ptr<Packet> p,
   route->SetSource(sourceAddr);
   route->SetGateway(Ipv4Address(localhost));
   route->SetOutputDevice(m_impl -> m_loopback);
+
+  NS_LOG_UNCOND("routing output packet: " << p);
+
   return route;
 }
 
@@ -105,7 +127,34 @@ bool AnthocnetRouting::RouteInput  (Ptr<const Packet> p,
                           const Ipv4Header &header, Ptr<const NetDevice> idev,
                           UnicastForwardCallback ucb, MulticastForwardCallback mcb,
                           LocalDeliverCallback lcb, ErrorCallback ecb) {
+  NS_ASSERT (m_impl -> m_ipv4 != 0);
+  NS_ASSERT (p != 0);
+  NS_ASSERT (m_impl -> m_ipv4->GetInterfaceForDevice (idev) >= 0);
+
+  NS_LOG_UNCOND("routing input");
+
+  // auto source = header.GetSource();
+  // auto dest   = header.GetDestination();
+
+  NS_LOG_UNCOND("ipv4 header: " << header);
+  NS_LOG_UNCOND("Broadcast allowed" << m_impl -> m_broadcastSocket -> GetAllowBroadcast ());
+
+  if (header.GetProtocol () == UdpL4Protocol::PROT_NUMBER) {
+    UdpHeader udpHeader;
+    p->PeekHeader (udpHeader);
+    if (udpHeader.GetDestinationPort () == ANTHOCNET_PORT) {
+        uint32_t iif = m_impl -> m_ipv4->GetInterfaceForDevice (idev);
+        // ANTHOCNET packets sent in broadcast are already managed, only callback
+        // the higher layer
+        lcb(p, header, iif);
+        return true;
+    }
+  }
+
   return false;
+
+  // only need to handle this case so far
+
 }
 
 void AnthocnetRouting::NotifyInterfaceUp (uint32_t interface) {
@@ -150,15 +199,15 @@ void AnthocnetRouting::InstallSockets() {
   auto ifAddress = m_impl -> m_ifAddress;
   auto device = m_impl -> m_device.Device();
 
-  auto socket = Socket::CreateSocket(GetObject<Node>(), UdpSocketFactory::GetTypeId());
+  Ptr<Socket> socket = Socket::CreateSocket(GetObject<Node>(), UdpSocketFactory::GetTypeId());
   NS_ASSERT (socket != 0);
   socket -> SetRecvCallback(MakeCallback(&AnthocnetRouting::ReceiveAnt, this));
   socket -> BindToNetDevice(device);
   socket -> Bind(InetSocketAddress(ifAddress.GetLocal(), ANTHOCNET_PORT));
-  socket -> SetAllowBroadcast(false);
+  socket -> SetAllowBroadcast(true);
   m_impl -> m_socket = socket;
 
-  auto broadcastSocket = Socket::CreateSocket (GetObject<Node> (), UdpSocketFactory::GetTypeId());
+  Ptr<Socket> broadcastSocket = Socket::CreateSocket (GetObject<Node> (), UdpSocketFactory::GetTypeId());
   NS_ASSERT(broadcastSocket != 0);
   broadcastSocket -> SetRecvCallback(MakeCallback(&AnthocnetRouting::ReceiveAnt, this));
   broadcastSocket -> BindToNetDevice(device);
@@ -188,6 +237,7 @@ void AnthocnetRouting::InstallLinkFailureCallback() {
     AntTypeHeader typeHeader(AntType::LinkFailureAnt);
     packet -> AddHeader(typeHeader);
     broadcastSocket -> SendTo(packet, 0, InetSocketAddress(ifAddress.GetBroadcast(), ANTHOCNET_PORT));
+    NS_LOG_UNCOND("Link failure called!");
   });
 }
 
@@ -217,6 +267,46 @@ void AnthocnetRouting::PrintRoutingTable (Ptr<OutputStreamWrapper> stream, Time:
 
 }
 
+void AnthocnetRouting::DoInitialize() {
+  m_impl -> m_helloTimer.Cancel();
+  m_impl -> m_helloTimer.SetFunction(&AnthocnetRouting::HelloTimerExpire, this);
+  Time startTime = Time(int64x64_t(GetRand()) * GetHelloTimerInterval());
+  NS_LOG_UNCOND("Start time: " <<  startTime.GetSeconds());
+  m_impl -> m_helloTimer.Schedule(startTime);
+  Ipv4RoutingProtocol::DoInitialize();
+}
+
+void
+AnthocnetRouting::HelloTimerExpire() {
+  NS_LOG_UNCOND("Trying to send hello: " << Simulator::Now().GetSeconds());
+
+  // if the broadcast socket is not yet initialized, wait
+  if(!(m_impl->m_broadcastSocket)){
+    NS_LOG_UNCOND("No broadcast socket set");
+    m_impl -> m_helloTimer.Schedule(s_helloInterval);
+  }
+
+  Ptr<Packet> packet = Create<Packet>();
+  HelloHeader helloHeader(m_impl->m_ifAddress.GetLocal());
+  packet -> AddHeader(helloHeader);
+  AntTypeHeader typeHeader(AntType::HelloAnt);
+  packet -> AddHeader(typeHeader);
+
+  NS_LOG_UNCOND(" sending successful: " << m_impl -> m_broadcastSocket -> SendTo(packet, 0, InetSocketAddress(m_impl->m_ifAddress.GetBroadcast(), ANTHOCNET_PORT)));
+  m_impl -> m_helloTimer.Schedule(s_helloInterval);
+  NS_LOG_UNCOND("Sent hello packet from: " << m_impl -> m_ifAddress.GetLocal() << "to: " << m_impl -> m_ifAddress.GetBroadcast());
+}
+
+void
+AnthocnetRouting::SetHelloTimerInterval(Time interval) {
+  s_helloInterval = interval;
+}
+
+Time
+AnthocnetRouting::GetHelloTimerInterval() {
+  return s_helloInterval;
+}
+
 Ipv4Address
 AnthocnetRouting::GetAddressOf(Ptr<NetDevice> device) {
   auto interface = m_impl -> m_ipv4 -> GetInterfaceForDevice(device);
@@ -226,6 +316,8 @@ AnthocnetRouting::GetAddressOf(Ptr<NetDevice> device) {
 
 void
 AnthocnetRouting::ReceiveAnt(Ptr<Socket> socket) {
+
+  NS_LOG_UNCOND("input received for anthocnet");
   Address sourceAddress;
   Ptr<Packet> packet =  socket -> RecvFrom (sourceAddress);
   // InetSockAddress inetSourceAddr = InetSockAddress::ConvertFrom(sourceAddr);

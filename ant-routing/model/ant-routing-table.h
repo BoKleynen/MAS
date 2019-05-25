@@ -164,7 +164,9 @@ private:
   // instance variables:
   using DestAddr      = Ipv4Address;
   using NeighborTable = std::map<DestAddr, std::shared_ptr<PheromoneEntry>>;
-  std::map<NeighborKey, std::shared_ptr<NeighborTable>> m_table;
+  using RoutingTableType = std::map<NeighborKey, std::shared_ptr<NeighborTable>>;
+  // TODO if ever multiple local variables use a pimpl type!
+  std::shared_ptr<RoutingTableType> m_table;
 
   // static variables:
   static double s_antBeta; // exploration exponent for the ants

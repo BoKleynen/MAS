@@ -76,6 +76,8 @@ NeighborManager::HelloReceived(const HelloHeader& header) {
   auto neighborPair = m_impl -> m_routingTable.GetNeighbor(sender);
   auto neighbor = neighborPair.first;
 
+  NS_LOG_UNCOND("Received hello at neighbor manager, neighbor present? " << neighborPair.second);
+
   if(!neighborPair.second) {
     neighbor = AddNeighbor(sender);
   }
@@ -96,6 +98,8 @@ NeighborManager::AddNeighbor(Ipv4Address address) {
   });
 
   neighbor.FailureDetector(detector);
+  // add the neighbor to the routing table
+  m_impl -> m_routingTable.AddNeighbor(neighbor);
 
   return neighbor;
 }

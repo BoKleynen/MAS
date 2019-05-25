@@ -19,6 +19,7 @@ def build(bld):
         'model/ant-netdevice.cc',
         'model/ant.cc',
         'model/backward-ant.cc',
+        'model/hello-ant.cc',
         'model/reactive-ant.cc',
         'model/proactive-ant.cc',
         'model/repair-ant.cc',
@@ -35,6 +36,7 @@ def build(bld):
         'test/routing-table-test-suite.cc',
         'test/ant-packet-test-suite.cc',
         'test/ant-netdevice-test-suite.cc',
+        'test/hello-ant-test-suite.cc',
         ]
 
     headers = bld(features='ns3header')
@@ -49,6 +51,7 @@ def build(bld):
         'model/ant-netdevice.h',
         'model/ant.h',
         'model/backward-ant.h',
+        'model/hello-ant.h',
         'model/reactive-ant.h',
         'model/proactive-ant.h',
         'model/repair-ant.h',

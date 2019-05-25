@@ -38,6 +38,7 @@ public:
   virtual Ptr<Ipv4RoutingProtocol> Create(Ptr<Node> node) const override;
 
 private:
+
   /**
    * The factory used to create an Anthocnet routing object
    */

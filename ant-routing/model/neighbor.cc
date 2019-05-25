@@ -183,6 +183,7 @@ NeighborFailureDetector::CheckInterval(Time checkInterval) {
 
 void
 NeighborFailureDetector::ExecuteCallbacks() {
+  NS_LOG_UNCOND("Callback done ----------------------------------------------");
   for(auto callbackIt = m_failureCallbacks.begin(); callbackIt != m_failureCallbacks.end(); callbackIt++ ){
     (*callbackIt)(m_neighbor);
   }
@@ -225,6 +226,7 @@ SimpleFailureDetector::HelloReceived(const HelloHeader& header) {
 
 bool
 SimpleFailureDetector::HasFailed() {
+  NS_LOG_UNCOND("has failed call: " << (Simulator::Now() - m_latestHello).GetSeconds() << ", max missed: " << (m_maxMissed * m_helloInterval).GetSeconds());
   return Simulator::Now() - m_latestHello > m_maxMissed * m_helloInterval;
 }
 

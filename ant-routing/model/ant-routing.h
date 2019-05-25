@@ -11,6 +11,10 @@
 namespace ns3 {
 namespace ant_routing {
 
+// forward declarations
+class AntRoutingTable;
+class NeighborManager;
+
 class AnthocnetRouting : public Ipv4RoutingProtocol {
 
 public:
@@ -110,10 +114,23 @@ public:
    */
   virtual void PrintRoutingTable (Ptr<OutputStreamWrapper> stream, Time::Unit unit = Time::S) const override;
 
+  AntRoutingTable GetRoutingTable();
+  NeighborManager GetNeighborManager();
+
+  Ipv4Address GetAddress();
+
+  static void SetHelloTimerInterval(Time interval);
+  static Time GetHelloTimerInterval();
+
+protected:
+  virtual void DoInitialize() override;
 private:
 
   // callback for when a message is received at the routing protocol socket
   void ReceiveAnt(Ptr<Socket> socket);
+
+  // hello timer, will send hello messages to everyone in the vicinity
+  void HelloTimerExpire();
 
   // install the sockets needed by the anthocnet routing
   void InstallSockets();
@@ -121,6 +138,12 @@ private:
   void InstallNeighborFactory();
   void InstallLinkFailureCallback();
 
+  static double GetRand() {
+    static Ptr<UniformRandomVariable> randGen = CreateObject<UniformRandomVariable> ();
+    return randGen -> GetValue(0, 1);
+  }
+  // statics
+  static Time s_helloInterval;
   // constants:
   static constexpr const char* localhost = "127.0.0.1";
 

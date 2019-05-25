@@ -94,7 +94,7 @@ double AntRoutingTable::s_gamma = 0.7;
 Time   AntRoutingTable::s_hopTime = MilliSeconds(3);
 
 // implementation of methods
-AntRoutingTable::AntRoutingTable() { }
+AntRoutingTable::AntRoutingTable() : m_table(std::make_shared<RoutingTableType>()) { }
 
 // methods related to generating routes
 Ptr<Ipv4Route>
@@ -112,7 +112,7 @@ AntRoutingTable::RouteTo(Ipv4Address source, Ipv4Address dest, double beta) {
 
   return RouteToNeighbor(source, dest, beta).CreateRoute(source, dest);
   // // case that no entries in the table (no neighbors) return empty pointer
-  // if (m_table.size() == 0) {
+  // if (m_table->size() == 0) {
   //   return Ptr<Ipv4Route>();
   // }
   //
@@ -151,7 +151,7 @@ Neighbor
 AntRoutingTable::RouteToNeighbor(Ipv4Address source, Ipv4Address dest, double beta) {
 
     // case that no entries in the table (no neighbors) return empty pointer
-    if (m_table.size() == 0) {
+    if (m_table->size() == 0) {
       return Neighbor();
     }
 
@@ -199,7 +199,7 @@ AntRoutingTable::NoPheromoneNeighbors(const AntHeader& header) {
   Ipv4Address dest   = header.GetDestination();
   std::vector<Neighbor> neighbors;
 
-  for(auto neighborTableIt = m_table.begin(); neighborTableIt != m_table.end(); neighborTableIt++) {
+  for(auto neighborTableIt = m_table -> begin(); neighborTableIt != m_table -> end(); neighborTableIt++) {
     auto entryPtr = GetPheromone(neighborTableIt -> first.Address(), dest);
     if(entryPtr == nullptr) {
       auto neighbor = neighborTableIt -> first.Get();
@@ -228,7 +228,7 @@ AntRoutingTable::BroadcastRouteTo(const AntHeader& ah) {
 std::vector<Neighbor>
 AntRoutingTable::BroadcastNeighbors() {
   std::vector<Neighbor> neighbors;
-  for(auto neighborTableIt = m_table.begin(); neighborTableIt != m_table.end(); neighborTableIt ++){
+  for(auto neighborTableIt = m_table -> begin(); neighborTableIt != m_table->end(); neighborTableIt ++){
     neighbors.push_back(neighborTableIt->first.Get());
   }
 
@@ -279,9 +279,9 @@ AntRoutingTable::HasPheromoneEntryFor(Ipv4Address source, Ipv4Address destinatio
 
 const std::shared_ptr<PheromoneEntry>
 AntRoutingTable::GetPheromone(Ipv4Address neighbor, Ipv4Address destination) {
-  auto neighborTableIt = m_table.find(neighbor);
+  auto neighborTableIt = m_table->find(neighbor);
 
-  if (neighborTableIt == m_table.end()) {
+  if (neighborTableIt == m_table->end()) {
     return nullptr;
   }
 
@@ -299,9 +299,9 @@ AntRoutingTable::GetPheromone(Ipv4Address neighbor, Ipv4Address destination) {
 void
 AntRoutingTable::SetPheromoneAt(Ipv4Address neighbor, Ipv4Address destination, const PheromoneEntry& entry) {
   // the neighbor table must exist, otherwise we silently ignore the call
-  auto neighborTableIt = m_table.find(neighbor);
+  auto neighborTableIt = m_table->find(neighbor);
 
-  if (neighborTableIt == m_table.end()) {
+  if (neighborTableIt == m_table->end()) {
     return;
   }
 
@@ -314,7 +314,7 @@ AntRoutingTable::SetPheromoneAt(Ipv4Address neighbor, Ipv4Address destination, c
 double AntRoutingTable::TotalPheromone(Ipv4Address dest, double beta) {
   double totalPheromone = 0;
 
-  for(auto nbrTableIt = m_table.begin(); nbrTableIt != m_table.end(); nbrTableIt++) {
+  for(auto nbrTableIt = m_table->begin(); nbrTableIt != m_table->end(); nbrTableIt++) {
     std::shared_ptr<NeighborTable> nbrTablePtr = nbrTableIt -> second;
     auto pheromoneIt = nbrTablePtr->find(dest);
     // if there is an entry for the destination, add the value
@@ -332,16 +332,16 @@ double AntRoutingTable::TotalPheromone(Ipv4Address dest, double beta) {
 
 void
 AntRoutingTable::AddNeighbor(const Neighbor& nb) {
-  m_table[NeighborKey(nb)] = std::make_shared<NeighborTable>();
+  (*m_table)[NeighborKey(nb)] = std::make_shared<NeighborTable>();
 }
 void
 AntRoutingTable::RemoveNeighbor(const Neighbor& nb) {
-  m_table.erase(nb);
+  m_table->erase(nb);
 }
 
 std::pair<Neighbor, bool> AntRoutingTable::GetNeighbor(Ipv4Address addr) {
-  auto neighborTableIter = m_table.find(addr);
-  if (neighborTableIter != m_table.end()) {
+  auto neighborTableIter = m_table->find(addr);
+  if (neighborTableIter != m_table->end()) {
     return std::make_pair(neighborTableIter->first, true);
   }
 
@@ -418,8 +418,8 @@ bool AntRoutingTable::IsNeighbor(Ipv4Address addr) {
 }
 
 bool AntRoutingTable::IsNeighbor(Neighbor neighbor) {
-  auto neighborTableIter = m_table.find(neighbor);
-  return neighborTableIter != m_table.end();
+  auto neighborTableIter = m_table->find(neighbor);
+  return neighborTableIter != m_table->end();
 }
 
 
@@ -428,7 +428,7 @@ bool AntRoutingTable::IsNeighbor(Neighbor neighbor) {
 std::vector<NeighborKey>
 AntRoutingTable::Neighbors() {
   std::vector<NeighborKey> neighbors;
-  for (auto neighborTableIt = m_table.begin(); neighborTableIt != m_table.end(); neighborTableIt ++ ) {
+  for (auto neighborTableIt = m_table->begin(); neighborTableIt != m_table->end(); neighborTableIt ++ ) {
     neighbors.push_back(neighborTableIt->first);
   }
 
@@ -436,8 +436,8 @@ AntRoutingTable::Neighbors() {
 }
 
 std::shared_ptr<AntRoutingTable::NeighborTable> AntRoutingTable::GetNeighborTable(NeighborKey neighbor) {
-  auto neighborTableIt = m_table.find(neighbor);
-  return neighborTableIt != m_table.end() ? neighborTableIt->second : std::make_shared<NeighborTable>();
+  auto neighborTableIt = m_table->find(neighbor);
+  return neighborTableIt != m_table->end() ? neighborTableIt->second : std::make_shared<NeighborTable>();
 }
 
 

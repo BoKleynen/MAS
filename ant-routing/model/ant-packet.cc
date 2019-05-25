@@ -92,13 +92,11 @@ AntNetHeader::Print (std::ostream &os) const
 
 // --------------- AntHeader  ---------------
 
-AntHeader::AntHeader (std::vector<Ipv4Address> visitedNodes, AntType antType,
+AntHeader::AntHeader (std::vector<Ipv4Address> visitedNodes,
           uint8_t hopCount, uint8_t broadcastCount,
           uint8_t backwardCount, uint32_t generation,
-          Ipv4Address dst, Ipv4Address origin,
-          Time timeEstimate)
-  : AntNetHeader (antType, origin),
-    m_hopCount (hopCount),
+          Ipv4Address dst, Time timeEstimate)
+  : m_hopCount (hopCount),
     m_broadcastCount (broadcastCount),
     m_backwardCount (backwardCount),
     m_generation (generation),
@@ -147,7 +145,6 @@ AntHeader::GetSerializedSize () const
 void
 AntHeader::Serialize (Buffer::Iterator i) const
 {
-  AntNetHeader::Serialize (i);
 
   i.WriteU8 (m_hopCount);
   i.WriteU8 (m_broadcastCount);
@@ -166,7 +163,6 @@ uint32_t
 AntHeader::Deserialize (Buffer::Iterator start)
 {
   auto i = start;
-  AntNetHeader::Deserialize (i);
 
   m_hopCount = i.ReadU8 ();
   m_broadcastCount = i.ReadU8 ();
@@ -247,16 +243,14 @@ void AntHeader::AddVisitedNode(Ipv4Address addr) {
 // --------------- LinkFailureNotification ---------------
 
 LinkFailureNotification::LinkFailureNotification ()
-  : AntNetHeader (AntType::LinkFailureAnt, Ipv4Address ()),
-    m_messages (std::vector<Message> ()) {}
+  : m_messages (std::vector<Message> ()) 
+{
+}
 
-LinkFailureNotification::LinkFailureNotification (Ipv4Address origin)
-  : AntNetHeader (AntType::LinkFailureAnt, origin),
-    m_messages (std::vector<Message> ()) {}
-
-LinkFailureNotification::LinkFailureNotification (Ipv4Address origin, std::vector<Message> messages)
-  :AntNetHeader (AntType::LinkFailureAnt, origin),
-    m_messages (messages) {}
+LinkFailureNotification::LinkFailureNotification (std::vector<Message> messages)
+  : m_messages (messages) 
+{
+}
 
 TypeId
 LinkFailureNotification::GetTypeId ()
@@ -283,8 +277,6 @@ LinkFailureNotification::GetSerializedSize () const
 void
 LinkFailureNotification::Serialize (Buffer::Iterator i) const
 {
-  AntNetHeader::Serialize (i);
-
   i.WriteU8 (m_messages.size());
   for (auto iter = m_messages.begin (); iter != m_messages.end (); iter++)
   {
@@ -296,7 +288,6 @@ uint32_t
 LinkFailureNotification::Deserialize (Buffer::Iterator start)
 {
   auto i = start;
-  AntNetHeader::Deserialize (i);
 
   auto n_messages = i.ReadU8 ();
   for (int n = 1; n < n_messages; n++) {

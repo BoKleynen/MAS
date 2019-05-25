@@ -22,6 +22,9 @@ enum class AntType : uint8_t
   LinkFailureAnt = 6,
 };
 
+/*
+ * specifies the type of header that follows and the ip adress of the sender.
+ */
 class AntNetHeader : public Header
 {
 public:
@@ -61,14 +64,12 @@ private:
 0                   1                   2                   3
 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|    Ant Type   |   Hop count   |Broadcast Count|Backward  Count|
+|   Hop count   |Broadcast Count|Backward  Count|               |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                           Generation                          |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                         Time Estimate                         |
 |                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                      Originator Address                       |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                      Destination Address                      |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -77,15 +78,14 @@ private:
 |                                                               |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
   */
-class AntHeader : public AntNetHeader
+class AntHeader : public Header
 {
 public:
   // full fledged constructor
-  AntHeader (std::vector<Ipv4Address> visitedNodes, AntType antType,
+  AntHeader (std::vector<Ipv4Address> visitedNodes,
             uint8_t hopCount, uint8_t broadcastCount,
             uint8_t m_backwardCount, uint32_t generation,
-            Ipv4Address dst, Ipv4Address origin,
-            Time timeEstimate);
+            Ipv4Address dst, Time timeEstimate);
 
   AntHeader(); // default constructor
 
@@ -132,7 +132,7 @@ private:
   std::vector<Ipv4Address>  m_visitedNodes;
 }; // class AntHeader
 
-class LinkFailureNotification : public AntNetHeader {
+class LinkFailureNotification : public Header {
 public:
   struct Message
   {
@@ -146,8 +146,7 @@ public:
   };
 
   LinkFailureNotification ();
-  LinkFailureNotification (Ipv4Address origin);
-  LinkFailureNotification (Ipv4Address origin, std::vector<Message> messages);
+  LinkFailureNotification (std::vector<Message> messages);
 
   static TypeId GetTypeId ();
   TypeId GetInstanceTypeId () const;
@@ -158,8 +157,9 @@ public:
 
   inline bool operator ==(const LinkFailureNotification& rhs)
   {
-    return AntNetHeader::operator== (rhs) && m_messages == rhs.m_messages;
+    return m_messages == rhs.m_messages;
   }
+  
 private:
   std::vector<Message> m_messages;
 

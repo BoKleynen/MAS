@@ -25,6 +25,9 @@ public:
   // Each ant has a specific role to perform when it visits the node
   // it will mutate some data or log certain entries.
   virtual void Visit(AnthocnetRouting router) = 0;
+
+  // Create a packet from the given ant
+  virtual Ptr<Packet> ToPacket() = 0;
 };
 
 class AntQueen {
@@ -63,6 +66,8 @@ public:
   bool HasRightAntType(const AntTypeHeader& typeHeader) {
     return AntSpecies::species == typeHeader.GetAntType();
   }
+
+  static constexpr AntType species = AntSpecies::Species;
 };
 
 } // namespace ant_routing

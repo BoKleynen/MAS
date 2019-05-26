@@ -75,15 +75,21 @@ Neighbor::Data(std::shared_ptr<NeighborImpl> data) {
 }
 
 void
-Neighbor::SumbitPacket(Ptr<Ipv4Route> route, Ptr<const Packet> packet,
+Neighbor::SubmitPacket(Ptr<Ipv4Route> route, Ptr<const Packet> packet,
                        const Ipv4Header &header, UnicastCallback callback) {
-  AntDevice().Submit(AntQueueEntry(route, packet, header, callback));
+  AntDevice().Submit(MakeSendQueueEntry<UnicastQueueEntry>(route, packet, header, callback));
+}
+
+void
+Neighbor::SubmitPacket(Ptr<const Packet> packet, const Ipv4Header& header, UnicastCallback callback ) {
+  auto route = CreateRoute(header.GetSource(), header.GetDestination());
+  Neighbor::SubmitPacket(packet, header, callback);
 }
 
 void
 Neighbor::SubmitExpeditedPacket(Ptr<Ipv4Route> route, Ptr<const Packet> packet,
                                 const Ipv4Header &header, UnicastCallback callback) {
-  AntDevice().SubmitExpedited(AntQueueEntry(route, packet, header, callback));
+  AntDevice().SubmitExpedited(MakeSendQueueEntry<UnicastQueueEntry>(route, packet, header, callback));
 
 }
 

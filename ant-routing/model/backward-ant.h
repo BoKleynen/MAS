@@ -20,6 +20,7 @@ public:
    * it will mutate some data or log certain entries
    */
   virtual void Visit(AnthocnetRouting router) override;
+  virtual Ptr<Packet> ToPacket() override;
 
   static constexpr AntType species = AntType::BackwardAnt;
 

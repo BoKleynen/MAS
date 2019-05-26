@@ -19,5 +19,10 @@ void BackwardAnt::Visit(AnthocnetRouting router) {
 
 }
 
+Ptr<Packet>
+BackwardAnt::ToPacket() {
+  return Ptr<Packet>();
+}
+
 } // namespace ant_routing
 } // namespace ns3

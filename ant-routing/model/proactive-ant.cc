@@ -4,12 +4,23 @@
 namespace ns3 {
 namespace ant_routing {
 
-ProactiveAnt::ProactiveAnt(Ptr<Packet> packet) {
+ProactiveAnt::ProactiveAnt(Ipv4Address source, Ipv4Address destination) {
 
 }
 
-void ProactiveAnt::Visit(AnthocnetRouting router) {
 
+ProactiveAnt::ProactiveAnt(Ptr<Packet> packet) {
+  packet->RemoveHeader(m_header);
+}
+
+void
+ProactiveAnt::Visit(AnthocnetRouting router) {
+
+}
+
+Ptr<Packet>
+ProactiveAnt::ToPacket() {
+  return Ptr<Packet>();
 }
 
 } // namespace ant_routing

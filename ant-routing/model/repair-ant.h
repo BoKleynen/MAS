@@ -13,6 +13,7 @@ public:
 
   virtual ~RepairAnt() = default;
   virtual void Visit(AnthocnetRouting router) override;
+  virtual Ptr<Packet> ToPacket() override;
 
   static constexpr  AntType species = AntType::RouteRepairAnt;
 };

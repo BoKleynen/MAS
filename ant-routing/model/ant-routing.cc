@@ -11,6 +11,7 @@
 #include "repair-ant.h"
 #include "ant-routing-table.h"
 #include "neighbor-manager.h"
+#include "reactive-queue.h"
 #include "ns3/nstime.h"
 namespace ns3 {
 
@@ -32,6 +33,9 @@ struct AnthocnetRouting::AnthocnetImpl {
   NeighborManager m_neighborManager;
   // ant hill for creating ants from incoming packets
   AntHill m_antHill;
+  // Queue that will hold all the packets that are waiting for the reactive path setup
+  // to be completed
+  ReactiveQueue m_reactiveQueue;
   // the address of the wifi interface attached
   Ipv4InterfaceAddress m_ifAddress;
   // Timer for the hello messages
@@ -52,6 +56,7 @@ AnthocnetRouting::AnthocnetImpl::AnthocnetImpl()
     m_routingTable(AntRoutingTable()),
     m_neighborManager(NeighborManager()),
     m_antHill(AntHill()),
+    m_reactiveQueue(ReactiveQueue()),
     m_ifAddress(Ipv4InterfaceAddress()),
     m_helloTimer(Timer::CANCEL_ON_DESTROY),
     m_socket(Ptr<Socket>()),
@@ -95,16 +100,34 @@ AnthocnetRouting::AnthocnetRouting() : m_impl(std::make_shared<AnthocnetImpl>())
 
 AnthocnetRouting::~AnthocnetRouting() { }
 
-Ipv4Address AnthocnetRouting::GetAddress() {
+Ipv4Address
+AnthocnetRouting::GetAddress() {
   return m_impl -> m_ifAddress.GetLocal();
 }
 
-NeighborManager AnthocnetRouting::GetNeighborManager() {
+Ipv4InterfaceAddress
+AnthocnetRouting::GetInterfaceAddress() {
+  return m_impl -> m_ifAddress;
+}
+
+NeighborManager
+AnthocnetRouting::GetNeighborManager() {
   return m_impl->m_neighborManager;
 }
 
-AntRoutingTable AnthocnetRouting::GetRoutingTable() {
+AntRoutingTable
+AnthocnetRouting::GetRoutingTable() {
   return m_impl -> m_routingTable;
+}
+
+AntHill
+AnthocnetRouting::GetAntHill() {
+  return m_impl -> m_antHill;
+}
+
+ReactiveQueue
+AnthocnetRouting::GetReactiveQueue() {
+  return m_impl -> m_reactiveQueue;
 }
 
 // we route all the output back to the device such that it becomes
@@ -125,13 +148,14 @@ Ptr<Ipv4Route> AnthocnetRouting::RouteOutput (Ptr<Packet> p,
   return route;
 }
 
-bool AnthocnetRouting::RouteInput  (Ptr<const Packet> p,
-                          const Ipv4Header &header, Ptr<const NetDevice> idev,
-                          UnicastForwardCallback ucb, MulticastForwardCallback mcb,
+bool
+AnthocnetRouting::RouteInput  (Ptr<const Packet> packet,
+                          const Ipv4Header &header, Ptr<const NetDevice> ingressDevice,
+                          UnicastForwardCallback ufcb, MulticastForwardCallback mcb,
                           LocalDeliverCallback lcb, ErrorCallback ecb) {
   NS_ASSERT (m_impl -> m_ipv4 != 0);
-  NS_ASSERT (p != 0);
-  NS_ASSERT (m_impl -> m_ipv4->GetInterfaceForDevice (idev) >= 0);
+  NS_ASSERT (packet != 0);
+  NS_ASSERT (m_impl -> m_ipv4->GetInterfaceForDevice (ingressDevice) >= 0);
 
   NS_LOG_UNCOND("routing input");
 
@@ -141,22 +165,95 @@ bool AnthocnetRouting::RouteInput  (Ptr<const Packet> p,
   NS_LOG_UNCOND("ipv4 header: " << header);
   NS_LOG_UNCOND("Broadcast allowed" << m_impl -> m_broadcastSocket -> GetAllowBroadcast ());
 
-  if (header.GetProtocol () == UdpL4Protocol::PROT_NUMBER) {
-    UdpHeader udpHeader;
-    p->PeekHeader (udpHeader);
-    if (udpHeader.GetDestinationPort () == ANTHOCNET_PORT) {
-        uint32_t iif = m_impl -> m_ipv4->GetInterfaceForDevice (idev);
-        // ANTHOCNET packets sent in broadcast are already managed, only callback
-        // the higher layer
-        lcb(p, header, iif);
-        return true;
-    }
+  uint32_t ingressInterfaceIndex = GetInterfaceIndexForDevice(ingressDevice);
+
+  if(header.GetDestination().IsMulticast()){
+    return false; // this is not a multicast protocol
+  }
+
+  if(HandleIngressBroadcasting(packet, header, ingressInterfaceIndex, lcb, ecb)){
+    return true;
+  }
+
+  if(HandleIngressLocal(packet, header, ingressInterfaceIndex, lcb, ecb)) {
+    return true;
+  }
+
+  if(HandleIngressForward(packet, header, ingressInterfaceIndex, ufcb, ecb)) {
+    return true;
   }
 
   return false;
+}
 
-  // only need to handle this case so far
+bool
+AnthocnetRouting::HandleIngressBroadcasting(Ptr<const Packet> packet,
+                          const Ipv4Header &header, uint32_t ingressInterfaceIndex,
+                          LocalDeliverCallback lcb, ErrorCallback ecb){
 
+  auto dest   = header.GetDestination();
+  if(!dest.IsBroadcast() && dest != GetInterfaceAddress().GetBroadcast()){
+    return false;
+  }
+
+  if(IsBroadCastForAnthocnet(packet, header)) {
+    // ant that was broadcasted has reached us
+    lcb(packet, header, ingressInterfaceIndex);
+  }else {
+    // we do not support broadcasting for other things than our own protocol
+    ecb(packet, header, Socket::SocketErrno::ERROR_OPNOTSUPP);
+  }
+  // we handled the broadcasting
+  return true;
+}
+
+bool
+AnthocnetRouting::HandleIngressLocal(Ptr<const Packet> packet,
+                          const Ipv4Header& header, uint32_t ingressInterfaceIndex,
+                          LocalDeliverCallback lcb, ErrorCallback ecb) {
+  auto dest = header.GetDestination();
+
+  if(lcb.IsNull()) {
+    ecb(packet, header, Socket::SocketErrno::ERROR_NOROUTETOHOST);
+  }
+  else if(dest == GetInterfaceAddress().GetLocal()) {
+    lcb(packet, header, ingressInterfaceIndex);
+  }
+  else {
+    return false;
+  }
+
+  return true;
+}
+
+bool
+AnthocnetRouting::HandleIngressForward(Ptr<const Packet> packet,
+                            const Ipv4Header& header, uint32_t ingressInterfaceIndex,
+                            UnicastForwardCallback ufcb, ErrorCallback ecb) {
+  if(GetRoutingTable().HasPheromoneEntryFor(header.GetDestination())) {
+    auto neighbor = GetRoutingTable().RoutePacket(header);
+    neighbor.SubmitPacket(packet, header, ufcb);
+  }else{
+    // enqueue the packets for reactive ants!
+    GetReactiveQueue().Submit(std::make_shared<UnicastQueueEntry>(Ptr<Ipv4Route>(), packet, header, ufcb), *this);
+  }
+  return true;
+}
+
+bool
+AnthocnetRouting::IsBroadCastForAnthocnet(Ptr<const Packet> packet, const Ipv4Header& header) {
+  if(header.GetProtocol() != UdpL4Protocol::PROT_NUMBER) {
+    return false;
+  }
+
+  UdpHeader udpHeader;
+  packet->PeekHeader(udpHeader);
+  return udpHeader.GetDestinationPort() == ANTHOCNET_PORT;
+}
+
+uint32_t
+AnthocnetRouting::GetInterfaceIndexForDevice(Ptr<const NetDevice> device) {
+  return m_impl -> m_ipv4 -> GetInterfaceForDevice(device);
 }
 
 void AnthocnetRouting::NotifyInterfaceUp (uint32_t interface) {
@@ -230,15 +327,16 @@ void AnthocnetRouting::InstallNeighborFactory() {
 void AnthocnetRouting::InstallLinkFailureCallback() {
   // note: need to copy the variables, will otherwise create a
   // reference loop which in turn will lead to a memory leak
-  auto broadcastSocket = m_impl -> m_broadcastSocket;
-  auto ifAddress = m_impl -> m_ifAddress;
-  m_impl -> m_neighborManager.FailureCallback([broadcastSocket, ifAddress] (std::vector<LinkFailureNotification::Message> messages) {
+  Ptr<Socket> broadcastSocket = m_impl -> m_broadcastSocket;
+  Ipv4InterfaceAddress ifAddress = m_impl -> m_ifAddress;
+  AntNetDevice device = m_impl -> m_device;
+  m_impl -> m_neighborManager.FailureCallback([device, broadcastSocket, ifAddress] (std::vector<LinkFailureNotification::Message> messages) mutable {
     LinkFailureNotification notification(ifAddress.GetLocal(), messages);
     Ptr<Packet> packet = Create<Packet>();
     packet -> AddHeader(notification);
     AntTypeHeader typeHeader(AntType::LinkFailureAnt);
     packet -> AddHeader(typeHeader);
-    broadcastSocket -> SendTo(packet, 0, InetSocketAddress(ifAddress.GetBroadcast(), ANTHOCNET_PORT));
+    device.SubmitExpedited(MakeSendQueueEntry<BroadcastQueueEntry>(broadcastSocket, packet, 0, InetSocketAddress(ifAddress.GetBroadcast(), ANTHOCNET_PORT)));
     NS_LOG_UNCOND("Link failure called!");
   });
 }
@@ -294,7 +392,8 @@ AnthocnetRouting::HelloTimerExpire() {
   AntTypeHeader typeHeader(AntType::HelloAnt);
   packet -> AddHeader(typeHeader);
 
-  NS_LOG_UNCOND(" sending successful: " << m_impl -> m_broadcastSocket -> SendTo(packet, 0, InetSocketAddress(m_impl->m_ifAddress.GetBroadcast(), ANTHOCNET_PORT)));
+  m_impl -> m_device.SubmitExpedited(MakeSendQueueEntry<BroadcastQueueEntry>(m_impl->m_broadcastSocket, packet, 0, InetSocketAddress(m_impl -> m_ifAddress.GetBroadcast(), ANTHOCNET_PORT)));
+  // m_impl -> m_broadcastSocket -> SendTo(packet, 0, InetSocketAddress(m_impl->m_ifAddress.GetBroadcast(), ANTHOCNET_PORT));
   m_impl -> m_helloTimer.Schedule(s_helloInterval);
   NS_LOG_UNCOND("Sent hello packet from: " << m_impl -> m_ifAddress.GetLocal() << "to: " << m_impl -> m_ifAddress.GetBroadcast());
 }

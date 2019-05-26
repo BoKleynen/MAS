@@ -14,6 +14,8 @@ namespace ant_routing {
 // forward declarations
 class AntRoutingTable;
 class NeighborManager;
+class AntHill;
+class ReactiveQueue;
 
 class AnthocnetRouting : public Ipv4RoutingProtocol {
 
@@ -60,9 +62,10 @@ public:
    * Note: In our case we'll have to build routes if there are none available
    *       look at AODV for more inspiration
    */
-  virtual bool RouteInput  (Ptr<const Packet> p, const Ipv4Header &header, Ptr<const NetDevice> idev,
-                            UnicastForwardCallback ucb, MulticastForwardCallback mcb,
-                            LocalDeliverCallback lcb, ErrorCallback ecb) override;
+  virtual bool RouteInput  (Ptr<const Packet> packet, const Ipv4Header &header,
+                            Ptr<const NetDevice> ingressDevice, UnicastForwardCallback ufcb,
+                            MulticastForwardCallback mcb, LocalDeliverCallback lcb,
+                            ErrorCallback ecb) override;
 
   /**
    * \param interface the index of the interface we are being notified about
@@ -116,8 +119,11 @@ public:
 
   AntRoutingTable GetRoutingTable();
   NeighborManager GetNeighborManager();
+  AntHill GetAntHill();
+  ReactiveQueue GetReactiveQueue();
 
   Ipv4Address GetAddress();
+  Ipv4InterfaceAddress GetInterfaceAddress();
 
   static void SetHelloTimerInterval(Time interval);
   static Time GetHelloTimerInterval();
@@ -138,6 +144,24 @@ private:
   void InstallNeighborFactory();
   void InstallLinkFailureCallback();
 
+  // input routing helper methods, returning true if they could handle the
+  // given input:
+
+  // Handles the broadcasting by dropping all broadcasting packets
+  // that are not aimed at Anthocnet (we don't know how to deal with that kind of traffic)
+  bool HandleIngressBroadcasting(Ptr<const Packet> packet,
+                            const Ipv4Header &header, uint32_t ingressInterfaceIndex,
+                            LocalDeliverCallback lcb, ErrorCallback ecb);
+  bool HandleIngressLocal(Ptr<const Packet> packet,
+                            const Ipv4Header &header, uint32_t ingressInterfaceIndex,
+                            LocalDeliverCallback lcb, ErrorCallback ecb);
+  bool HandleIngressForward(Ptr<const Packet> packet,
+                              const Ipv4Header& header, uint32_t ingressInterfaceIndex,
+                              UnicastForwardCallback ufcb, ErrorCallback ecb);
+
+  uint32_t GetInterfaceIndexForDevice(Ptr<const NetDevice> device);
+  bool IsBroadCastForAnthocnet(Ptr<const Packet> packet, const Ipv4Header& header);
+  // used as a random variable stream for some actions
   static double GetRand() {
     static Ptr<UniformRandomVariable> randGen = CreateObject<UniformRandomVariable> ();
     return randGen -> GetValue(0, 1);

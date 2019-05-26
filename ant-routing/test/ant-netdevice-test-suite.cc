@@ -115,7 +115,7 @@ AntNetDeviceTestCase1::Call(Ipv4Address sourceAddr,
    auto routeToDest = ipv4->GetRoutingProtocol() -> RouteOutput(packet, header, sourceAntDev.Device(), err);
 
    // place an entry in the queue of the ant device, will do a callback to the forwarder
-   sourceAntDev.Submit(AntQueueEntry( Ptr<Ipv4Route>(), packet, header, ucb));
+   sourceAntDev.Submit(MakeSendQueueEntry<UnicastQueueEntry>( Ptr<Ipv4Route>(), packet, header, ucb));
    // dest == next hop
 
    ipv4->Send(packet, sourceAddr, destAddr, 0, routeToDest);

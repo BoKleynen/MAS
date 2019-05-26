@@ -9,10 +9,12 @@ namespace ant_routing {
 class HelloAnt : public Ant {
 public:
   HelloAnt() = default;
+  HelloAnt(Ipv4Address source);
   HelloAnt(Ptr<Packet> packet);
   ~HelloAnt() = default;
 
   virtual void Visit(AnthocnetRouting router) override;
+  virtual Ptr<Packet> ToPacket() override;
 
   static constexpr AntType species = AntType::HelloAnt;
 private:

@@ -43,8 +43,8 @@ public:
   // param packet:    the packet to deliver
   // param header:    Ipv4 header containing information about the packet for the network layer
   // param callback:  Callback function to be called once the packet is to be sumbitted
-  void SumbitPacket(Ptr<Ipv4Route> route, Ptr<const Packet> packet, const Ipv4Header &header, UnicastCallback callback);
-
+  void SubmitPacket(Ptr<Ipv4Route> route, Ptr<const Packet> packet, const Ipv4Header &header, UnicastCallback callback);
+  void SubmitPacket(Ptr<const Packet> packet, const Ipv4Header& header, UnicastCallback);
   // submits a packet to the destination, using the expedited lane. (used for ants for example)
   void SubmitExpeditedPacket(Ptr<Ipv4Route> route, Ptr<const Packet> packet, const Ipv4Header &header, UnicastCallback callback);
 

@@ -1,7 +1,7 @@
 #ifndef ANT_NETDEVICE_H
 #define ANT_NETDEVICE_H
 
-#include "ant-queue-entry.h"
+#include "send-queue-entry.h"
 #include "ns3/wifi-module.h"
 #include "ns3/packet.h"
 #include <memory>
@@ -20,8 +20,8 @@ public:
   Ptr<NetDevice> Device();
   void Device(Ptr<NetDevice> device);
 
-  void Submit(const AntQueueEntry& entry);
-  void SubmitExpedited(const AntQueueEntry& entry);
+  void Submit(std::shared_ptr<SendQueueEntry> entry);
+  void SubmitExpedited(std::shared_ptr<SendQueueEntry> entry);
 
   // returns the size of the std queue (not used to expedite ants)
   std::size_t QueueSize();

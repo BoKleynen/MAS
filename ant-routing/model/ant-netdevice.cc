@@ -10,7 +10,7 @@ namespace ant_routing {
 struct AntNetDevice::AntNetDeviceImpl {
   // type definitions :
 
-  using AntQueue = std::queue<AntQueueEntry>;
+  using SendQueue = std::queue<std::shared_ptr<SendQueueEntry>>;
 
   // constructor & destructor
 
@@ -24,7 +24,7 @@ struct AntNetDevice::AntNetDeviceImpl {
   //check if the underlying device is idle (no entries in the queue)
   bool IsIdle();
 
-  void SubmitTo(const AntQueueEntry& device, AntQueue& queue);
+  void SubmitTo(std::shared_ptr<SendQueueEntry> entry, SendQueue& queue);
 
   // sends the next packet. Note that this operation does not
   // remove an entry from the queue as the entry is used to record the sending
@@ -56,8 +56,8 @@ struct AntNetDevice::AntNetDeviceImpl {
   // members:
 
   Ptr<NetDevice> m_device;
-  AntQueue m_stdQueue;
-  AntQueue m_fastQueue;
+  SendQueue m_stdQueue;
+  SendQueue m_fastQueue;
   Time m_sendTimeEst; // estimate of the time needed to send a message over the channel
   std::size_t m_maxQueueSize; // the max queue size for each queue before we start dropping packets
   bool m_tracesHooked;
@@ -71,7 +71,7 @@ AntNetDevice::AntNetDeviceImpl::AntNetDeviceImpl()
 // of the constructor of the AntNetDevice since the latter is a reference type
 // and the 'underlying' device must only be hooked up once
 AntNetDevice::AntNetDeviceImpl::AntNetDeviceImpl(Ptr<NetDevice> device)
-  : m_device(device), m_stdQueue(AntQueue()), m_fastQueue(AntQueue()), m_maxQueueSize(DEFAULT_MAX_QUEUESIZE), m_tracesHooked(false) {
+  : m_device(device), m_stdQueue(SendQueue()), m_fastQueue(SendQueue()), m_maxQueueSize(DEFAULT_MAX_QUEUESIZE), m_tracesHooked(false) {
     HookupTraces(device);
   }
 
@@ -85,7 +85,7 @@ AntNetDevice::AntNetDeviceImpl::IsIdle() {
 }
 
 void
-AntNetDevice::AntNetDeviceImpl::SubmitTo(const AntQueueEntry& entry, AntQueue& queue) {
+AntNetDevice::AntNetDeviceImpl::SubmitTo(std::shared_ptr<SendQueueEntry> entry, SendQueue& queue) {
   bool idle = IsIdle();
   queue.push(entry);
   if(idle) {
@@ -98,20 +98,20 @@ void
 AntNetDevice::AntNetDeviceImpl::SendNext() {
   // send function (to spare some lines of code -> issues with references)
 
-  auto send = [] (AntQueueEntry& nxt) {
-    nxt.m_sending = true;
-    nxt.m_sendStartTime = Simulator::Now();
-    nxt.m_unicastCallback(nxt.m_route, nxt.m_packet, nxt.m_header);
+  auto send = [] (auto nxt) {
+    nxt->Sending(true);
+    nxt->SendStartTime(Simulator::Now());
+    (*nxt)();
   };
 
   if(!m_fastQueue.empty()) {
-    AntQueueEntry& nxt = m_fastQueue.front();
+    auto nxt = m_fastQueue.front();
     send(nxt);
     return;
   }
 
   if(!m_stdQueue.empty()) {
-    AntQueueEntry& nxt = m_stdQueue.front();
+    auto nxt = m_stdQueue.front();
     send(nxt);
     return;
   }
@@ -183,12 +183,12 @@ AntNetDevice::AntNetDeviceImpl::TxOkHeaderCallback(const WifiMacHeader& h) {
 // callback to be called when the transmission failed
 void
 AntNetDevice::AntNetDeviceImpl::DroppedPacketCallback() {
-  if(!m_fastQueue.empty() && m_fastQueue.front().m_sending) {
+  if(!m_fastQueue.empty() && m_fastQueue.front()->Sending()) {
     m_fastQueue.pop();
     SendNext();
   }
 
-  if(!m_stdQueue.empty() && m_stdQueue.front().m_sending) {
+  if(!m_stdQueue.empty() && m_stdQueue.front()->Sending()) {
     m_stdQueue.pop();
     SendNext();
   }
@@ -200,19 +200,19 @@ AntNetDevice::AntNetDeviceImpl::DroppedPacketCallback() {
 void
 AntNetDevice::AntNetDeviceImpl::DeliveredPacketCallback() {
 
-  auto handleSent = [this] (AntQueue& queue) {
-    auto elapsedTime = Simulator::Now() - queue.front().m_sendStartTime;
+  auto handleSent = [this] (SendQueue& queue) {
+    auto elapsedTime = Simulator::Now() - queue.front()->SendStartTime();
     m_sendTimeEst = Seconds(s_alpha * m_sendTimeEst.GetSeconds() + (1 - s_alpha) * elapsedTime.GetSeconds());
     queue.pop();
     SendNext();
   };
 
-  if(!m_fastQueue.empty() && m_fastQueue.front().m_sending) {
+  if(!m_fastQueue.empty() && m_fastQueue.front()->Sending()) {
     handleSent(m_fastQueue);
     return;
   }
 
-  if(!m_stdQueue.empty() && m_stdQueue.front().m_sending) {
+  if(!m_stdQueue.empty() && m_stdQueue.front()->Sending()) {
     handleSent(m_stdQueue);
     return;
   }
@@ -251,7 +251,7 @@ AntNetDevice::Device(Ptr<NetDevice> device) {
 }
 
 void
-AntNetDevice::Submit(const AntQueueEntry& entry) {
+AntNetDevice::Submit(std::shared_ptr<SendQueueEntry> entry) {
   if(m_impl -> m_stdQueue.size() > MaxQueueSize()) {
     return; // drop the packet. TODO do we add a trace source for this?
   }
@@ -260,7 +260,7 @@ AntNetDevice::Submit(const AntQueueEntry& entry) {
 }
 
 void
-AntNetDevice::SubmitExpedited(const AntQueueEntry& entry) {
+AntNetDevice::SubmitExpedited(std::shared_ptr<SendQueueEntry> entry) {
   if(m_impl -> m_stdQueue.size() > MaxQueueSize()) {
     return;
   }

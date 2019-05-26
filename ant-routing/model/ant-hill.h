@@ -22,6 +22,13 @@ public:
   void AddQueen(std::shared_ptr<AntQueen> queen);
 
   std::shared_ptr<AntQueen> GetQueen(AntType antType);
+
+  template<typename QueenType>
+  std::shared_ptr<QueenType> Get() {
+    auto antType = QueenType::species;
+    return std::dynamic_pointer_cast<QueenType>(GetQueen(antType));
+  }
+
 private:
   struct AntHillImpl;
   std::shared_ptr<AntHillImpl> m_impl;

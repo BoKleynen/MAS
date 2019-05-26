@@ -11,5 +11,10 @@ RepairAnt::Visit(AnthocnetRouting router) {
 
 }
 
+Ptr<Packet>
+RepairAnt::ToPacket() {
+  return Ptr<Packet>();
+}
+
 } // namespace ns3
 } // namespace ant_routing

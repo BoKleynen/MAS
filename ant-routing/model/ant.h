@@ -27,8 +27,8 @@ public:
   // it will mutate some data or log certain entries.
   virtual void Visit(AnthocnetRouting router) = 0;
 
-  void BroadcastPacket(Ptr<Packet> packet, AnthocnetRouting routing);
-  void UnicastPacket(Ptr<Packet> packet, AnthocnetRouting routing, Neighbor neighbor);
+  void BroadcastPacket(Ptr<Packet> packet, AnthocnetRouting router);
+  void UnicastPacket(Ptr<Packet> packet, AnthocnetRouting router, Neighbor neighbor);
 
   // Create a packet from the given ant
   virtual Ptr<Packet> ToPacket() = 0;

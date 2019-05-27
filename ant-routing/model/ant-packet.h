@@ -84,7 +84,7 @@ public:
   // full fledged constructor
   AntHeader (std::vector<Ipv4Address> visitedNodes,
             uint8_t hopCount, uint8_t broadcastCount,
-            uint8_t m_backwardCount, uint32_t generation,
+            uint8_t visitedSize, uint32_t generation,
             Ipv4Address source,Ipv4Address dst, Time timeEstimate);
 
   AntHeader(); // default constructor
@@ -105,7 +105,7 @@ public:
 
   uint8_t GetHopCount() const;
   uint8_t GetBroadcastCount() const;
-  uint8_t GetBackwardCount() const;
+  uint8_t GetVisitedSize() const;
   uint32_t GetGeneration() const;
   Ipv4Address GetSource() const;
   Ipv4Address GetDestination() const;
@@ -114,7 +114,7 @@ public:
 
   void SetHopCount(uint8_t hopCount);
   void SetBroadcastCount(uint8_t broadcastCount);
-  void SetBackwardCount(uint8_t backwardCount);
+  void SetVisitedSize(uint8_t backwardCount);
   void SetGeneration(uint32_t generation);
   void SetSource(Ipv4Address source);
   void SetDestination(Ipv4Address dest);
@@ -126,7 +126,7 @@ public:
 
   uint8_t                   m_hopCount;
   uint8_t                   m_broadcastCount;
-  uint8_t                   m_backwardCount;
+  uint8_t                   m_visitedSize;
   uint32_t                  m_generation;
   Ipv4Address               m_source;
   Ipv4Address               m_dst;

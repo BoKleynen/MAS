@@ -24,7 +24,25 @@ public:
   virtual Ptr<Packet> ToPacket() override;
 
   static constexpr AntType species = AntType::BackwardAnt;
+private:
+  // getter for the header
+  AntHeader GetHeader();
+  // updates metrics such as hop count and travel time
+  void UpdateDistanceMetrics(AnthocnetRouting router);
+  // updates the routing table
+  void UpdateRoutingTable(AnthocnetRouting router);
+  // release all the pending packages
+  void ReleasePending(AnthocnetRouting router);
+  // makes the next hop
+  void NextHop(AnthocnetRouting router);
+  // construct packet for the next hop
+  Ptr<Packet> NextHopPacket(AnthocnetRouting router);
 
+  // handle the case where the backward ant is at the target
+  // of the forward ant
+  void HandleAtDestination(AnthocnetRouting router);
+
+  AntHeader m_header;
 };
 
 using BackwardQueen = AntQueenImpl<BackwardAnt>;
@@ -60,7 +78,10 @@ public:
   // uses the given header to construct a backward ant
   std::shared_ptr<BackwardAnt> CreateFromForwardAnt(const AntHeader& header) {
     // TODO: need for extra calls?
-    return std::make_shared<BackwardAnt>(header);
+    AntHeader newHeader(header);
+    newHeader.m_timeEstimate = Seconds(0);
+    newHeader.m_hopCount = 0;
+    return std::make_shared<BackwardAnt>(newHeader);
   }
 };
 

@@ -97,6 +97,7 @@ ReactiveAnt::NextHopPacket(AnthocnetRouting router) {
   AntHeader antHeader = GetHeader();
   antHeader.AddVisitedNode(router.GetAddress());
   antHeader.m_hopCount++;
+  antHeader.m_visitedSize++;
   auto device = router.GetDevice();
   antHeader.m_timeEstimate = (device.QueueSize() + 1)*device.SendingTimeEst();
   auto packet = Create<Packet>();

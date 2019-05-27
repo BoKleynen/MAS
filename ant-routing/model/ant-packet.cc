@@ -80,11 +80,11 @@ AntTypeHeader::Print (std::ostream &os) const
 
 AntHeader::AntHeader (std::vector<Ipv4Address> visitedNodes,
           uint8_t hopCount, uint8_t broadcastCount,
-          uint8_t backwardCount, uint32_t generation,
+          uint8_t visitedSize, uint32_t generation,
           Ipv4Address source, Ipv4Address dst, Time timeEstimate)
   : m_hopCount (hopCount),
     m_broadcastCount (broadcastCount),
-    m_backwardCount (backwardCount),
+    m_visitedSize (visitedSize),
     m_generation (generation),
     m_source(source),
     m_dst (dst),
@@ -96,7 +96,7 @@ AntHeader::AntHeader (std::vector<Ipv4Address> visitedNodes,
 AntHeader::AntHeader()
   : m_hopCount (0),
     m_broadcastCount (0),
-    m_backwardCount (0),
+    m_visitedSize (0),
     m_generation (0),
     m_source(Ipv4Address()),
     m_dst(Ipv4Address()),
@@ -124,10 +124,10 @@ AntHeader::GetInstanceTypeId () const
 uint32_t
 AntHeader::GetSerializedSize () const
 {
-  return  3*sizeof(uint8_t) // hop count + broadcast count + backwardCount
+  return  3*sizeof(uint8_t) // hop count + broadcast count + visited
           + sizeof(uint32_t) // generation
           + sizeof(Time) // time estimate
-          + (2 + m_hopCount) * IPV4_ADDRESS_SIZE;  // (2 + (m_hopCount - 1))
+          + (2 + m_visitedSize) * IPV4_ADDRESS_SIZE;  // (2 + (m_hopCount - 1))
 }
 
 void
@@ -135,8 +135,8 @@ AntHeader::Serialize (Buffer::Iterator i) const
 {
 
   i.WriteU8 (m_hopCount);
-  i.WriteU8 (m_broadcastCount);
-  i.WriteU8 (m_backwardCount);
+  i.WriteU8 (m_visitedSize);
+  i.WriteU8 (m_visitedSize);
   i.WriteHtonU32 (m_generation);
   // https://www.nsnam.org/doxygen/lte-rlc-tag_8cc_source.html#l00066
   //auto nanoTime = m_timeEstimate.GetNanoSeconds();
@@ -156,7 +156,7 @@ AntHeader::Deserialize (Buffer::Iterator start)
 
   m_hopCount = i.ReadU8 ();
   m_broadcastCount = i.ReadU8 ();
-  m_backwardCount = i.ReadU8 ();
+  m_visitedSize = i.ReadU8 ();
   m_generation = i.ReadNtohU32 ();
   int64_t rcvdTime;
   // i.Read ((uint8_t *)&rcvdTime, 8);
@@ -166,7 +166,7 @@ AntHeader::Deserialize (Buffer::Iterator start)
   ReadFrom(i, m_source);
   ReadFrom (i, m_dst);
   Ipv4Address addr;
-  for (int index=0; index < m_hopCount; index++) { // (m_hopCount - 1) visited nodes
+  for (int index=0; index < m_visitedSize; index++) { // (m_hopCount - 1) visited nodes
     ReadFrom(i, addr);
     m_visitedNodes.push_back(addr);
   }
@@ -188,8 +188,8 @@ uint8_t AntHeader::GetHopCount() const {
 uint8_t AntHeader::GetBroadcastCount() const {
   return m_broadcastCount;
 }
-uint8_t AntHeader::GetBackwardCount() const {
-  return m_backwardCount;
+uint8_t AntHeader::GetVisitedSize() const {
+  return m_visitedSize;
 }
 uint32_t AntHeader::GetGeneration() const {
   return m_generation;
@@ -213,8 +213,8 @@ void AntHeader::SetHopCount(uint8_t hopCount) {
 void AntHeader::SetBroadcastCount(uint8_t broadcastCount) {
   m_broadcastCount = broadcastCount;
 }
-void AntHeader::SetBackwardCount(uint8_t backwardCount) {
-  m_backwardCount = backwardCount;
+void AntHeader::SetVisitedSize(uint8_t backwardCount) {
+  m_visitedSize = backwardCount;
 }
 void AntHeader::SetGeneration(uint32_t generation) {
   m_generation = generation;

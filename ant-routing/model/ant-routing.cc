@@ -230,12 +230,12 @@ bool
 AnthocnetRouting::HandleIngressForward(Ptr<const Packet> packet,
                             const Ipv4Header& header, uint32_t ingressInterfaceIndex,
                             UnicastForwardCallback ufcb, ErrorCallback ecb) {
-  if(GetRoutingTable().HasPheromoneEntryFor(header.GetDestination())) {
-    auto neighbor = GetRoutingTable().RoutePacket(header);
-    neighbor.SubmitPacket(packet, header, ufcb);
+  auto optNeighbor = GetRoutingTable().RoutePacket(header);
+  if(optNeighbor.IsValid()) {
+    optNeighbor.Get().SubmitPacket(packet, header, ufcb);
   }else{
     // enqueue the packets for reactive ants!
-    GetReactiveQueue().Submit(std::make_shared<UnicastQueueEntry>(Ptr<Ipv4Route>(), packet, header, ufcb), *this);
+    GetReactiveQueue().Submit(MakeReactiveQueueEntry(packet, header, ingressInterfaceIndex, ufcb, ecb), *this);
   }
   return true;
 }

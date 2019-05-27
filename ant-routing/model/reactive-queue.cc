@@ -7,38 +7,42 @@ namespace ns3 {
 namespace ant_routing {
 
 // ReactiveQueue helper classes ------------------------------------------------
-
 struct ReactiveQueue::ReactiveQueueEntry {
-  ReactiveQueueEntry(std::shared_ptr<UnicastQueueEntry> entry);
+
+  ReactiveQueueEntry(Ptr<const Packet> packet, const Ipv4Header& header, uint32_t ingressInterfaceIndex,
+  UnicastCallback ufcb, ErrorCallback ecb);
 
   Ipv4Address GetSource();
   Ipv4Address GetDestination();
   Time        GetSubmissionTime();
-  std::shared_ptr<UnicastQueueEntry> GetUnicastEntry();
 
   Time m_submissionTime;
-  std::shared_ptr<UnicastQueueEntry> m_unicastEntry;
+  Ptr<const Packet> m_packet;
+  Ipv4Header m_header;
+  uint32_t m_ingressInterfaceIndex;
+  UnicastCallback m_ufcb;
+  ErrorCallback m_ecb;
 };
 
-ReactiveQueue::ReactiveQueueEntry::ReactiveQueueEntry(std::shared_ptr<UnicastQueueEntry> entry)
-  : m_submissionTime(Simulator::Now()), m_unicastEntry(entry) { }
+ReactiveQueue::ReactiveQueueEntry::ReactiveQueueEntry(Ptr<const Packet> packet,
+                                                      const Ipv4Header& header,
+                                                      uint32_t ingressInterfaceIndex,
+                                                      UnicastCallback ufcb,
+                                                      ErrorCallback ecb)
+  : m_submissionTime(Simulator::Now()), m_packet(packet), m_header(header),
+    m_ingressInterfaceIndex(ingressInterfaceIndex), m_ufcb(ufcb), m_ecb(ecb){ }
 
 Ipv4Address
 ReactiveQueue::ReactiveQueueEntry::GetSource() {
-  return m_unicastEntry->GetHeader().GetSource();
+  return m_header.GetSource();
 }
 Ipv4Address
 ReactiveQueue::ReactiveQueueEntry::GetDestination() {
-  return m_unicastEntry->GetHeader().GetDestination();
+  return m_header.GetDestination();
 }
 Time
 ReactiveQueue::ReactiveQueueEntry::GetSubmissionTime() {
   return m_submissionTime;
-}
-
-std::shared_ptr<UnicastQueueEntry>
-ReactiveQueue::ReactiveQueueEntry::GetUnicastEntry() {
-  return std::shared_ptr<UnicastQueueEntry>();
 }
 
 struct ReactiveQueue::ReactiveQueueImpl {
@@ -72,10 +76,9 @@ ReactiveQueue::~ReactiveQueue() { }
 
 // TODO: Check if pass by value is appropriate for an entry
 void
-ReactiveQueue::Submit(std::shared_ptr<UnicastQueueEntry> entry, AnthocnetRouting router) {
-  auto queueEntry = std::make_shared<ReactiveQueueEntry>(entry);
-  auto source = queueEntry -> GetSource();
-  auto dest   = queueEntry -> GetDestination();
+ReactiveQueue::Submit(std::shared_ptr<ReactiveQueueEntry> entry, AnthocnetRouting router) {
+  auto source = entry -> GetSource();
+  auto dest   = entry -> GetDestination();
   auto queen = router.GetAntHill().Get<ReactiveQueen>();
   auto ant = queen->CreateNew(source, dest);
 
@@ -83,29 +86,29 @@ ReactiveQueue::Submit(std::shared_ptr<UnicastQueueEntry> entry, AnthocnetRouting
   if(!HasQueue(dest)) {
     m_impl -> m_queueMap[dest] = std::make_shared<PendingQueue>();
   }
-  GetPendingQueue(dest)->push_back(queueEntry);
+  GetPendingQueue(dest)->push_back(entry);
   PrugeQueue(dest);
 
   ant -> Visit(router);
 }
 
-SendQueueEntries
-ReactiveQueue::EntryAddedFor(Ipv4Address destination) {
+void
+ReactiveQueue::EntryAddedFor(Ipv4Address destination, AnthocnetRouting router) {
   // pruge all the out to date entries
   PrugeQueue(destination);
-  // transfer all the pending queue entries
 
   if(!HasEntries(destination)) {
-    return SendQueueEntries();
+    return;
   }
 
-  SendQueueEntries entries;
+  // in case there are entries, we'll re-ingest the packets into the router
   auto pendingQueue = GetPendingQueue(destination);
   for(auto entryIt = pendingQueue->begin(); entryIt != pendingQueue->end(); entryIt++) {
-    entries.push_back((*entryIt) -> GetUnicastEntry());
+    auto entry = (*entryIt);
+    router.HandleIngressForward( entry -> m_packet, entry -> m_header,
+                                 entry -> m_ingressInterfaceIndex, entry -> m_ufcb,
+                                 entry -> m_ecb);
   }
-
-  return entries;
 }
 
 
@@ -150,6 +153,13 @@ ReactiveQueue::GetPendingQueue(Ipv4Address dest) {
   }
 
   return m_impl -> m_queueMap[dest];
+}
+
+std::shared_ptr<ReactiveQueue::ReactiveQueueEntry>
+MakeReactiveQueueEntry( Ptr<const Packet> packet, const Ipv4Header& header,
+                        uint32_t ingressInterfaceIndex, UnicastCallback ufcb,
+                        ErrorCallback ecb) {
+  return std::make_shared<ReactiveQueue::ReactiveQueueEntry>(packet, header, ingressInterfaceIndex, ufcb, ecb);
 }
 
 } // namespace ant_routing

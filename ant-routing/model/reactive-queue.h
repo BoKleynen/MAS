@@ -8,31 +8,38 @@
 namespace ns3 {
 namespace ant_routing {
 
+// forward declarations
 class AnthocnetRouting;
 class AntNetDevice;
+
 template<typename T>
 class AntQueenImpl;
 class ReactiveAnt;
 
 using ReactiveQueen = AntQueenImpl<ReactiveAnt>;
-
 template<>
 class AntQueenImpl<ReactiveAnt>;
+
+
+using UnicastCallback = Ipv4RoutingProtocol::UnicastForwardCallback;
+using ErrorCallback   = Ipv4RoutingProtocol::ErrorCallback;
+
 // Queue used for pending packets that could not be sent because there was no
 // entry in the routing table (unicast packets only)
 class ReactiveQueue {
 public:
+  struct ReactiveQueueEntry;
+
   ReactiveQueue();
   virtual ~ReactiveQueue();
 
-  void Submit(std::shared_ptr<UnicastQueueEntry> entry, AnthocnetRouting router);
-  SendQueueEntries EntryAddedFor(Ipv4Address destination);
+  void Submit(std::shared_ptr<ReactiveQueueEntry> entry, AnthocnetRouting router);
+  void EntryAddedFor(Ipv4Address destination, AnthocnetRouting router);
 
   static void TimeoutInterval(Time timeout);
   static Time TimeoutInterval();
 
 private:
-  struct ReactiveQueueEntry;
   struct ReactiveQueueImpl;
 
   using PendingQueue = std::list<std::shared_ptr<ReactiveQueueEntry>>;
@@ -59,6 +66,10 @@ private:
   std::shared_ptr<ReactiveQueueImpl> m_impl;
 };
 
+std::shared_ptr<ReactiveQueue::ReactiveQueueEntry>
+MakeReactiveQueueEntry( Ptr<const Packet> packet, const Ipv4Header& header,
+                        uint32_t ingressInterfaceIndex, UnicastCallback ufcb,
+                        ErrorCallback ecb);
 } // namespace ant_routing
 } // namespace ns3
 

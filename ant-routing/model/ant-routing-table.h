@@ -74,6 +74,29 @@ private:
 bool operator<(const NeighborKey &lhs, const NeighborKey &rhs);
 bool operator==(const NeighborKey &lhs, const NeighborKey &rhs);
 
+
+// optional type, used to return neighbors that can construct routes
+struct OptNeighbor {
+public:
+  // create a valid optional
+  OptNeighbor(Neighbor neighbor)
+    : m_opt(std::make_pair(neighbor, true)){ }
+
+  // create invalid optional
+  OptNeighbor()
+    : m_opt(std::make_pair(Neighbor(), false)){ }
+
+  bool IsValid() {
+    return m_opt.second;
+  }
+
+  Neighbor Get() {
+    return m_opt.first;
+  }
+private:
+  std::pair<Neighbor, bool> m_opt;
+};
+
 /**
  * Class representing the routing table used to route ants and packages.
  * For each destination in the table, a pheromone value is kept for each of the
@@ -93,8 +116,8 @@ public:
   Ptr<Ipv4Route> RouteTo(const Ipv4Header& ipv4h);
   Ptr<Ipv4Route> RouteTo(const AntHeader& ah);
 
-  Neighbor RoutePacket(const Ipv4Header& ipv4h);
-  Neighbor RouteAnt(const AntHeader& ah);
+  OptNeighbor RoutePacket(const Ipv4Header& ipv4h);
+  OptNeighbor RouteAnt(const AntHeader& ah);
 
   // Creates routes to the destinaton with as next hop all the neighbor nodes
   // That do not yet have any pheromone value.
@@ -179,7 +202,7 @@ private:
   // general function that generates a route from source to destination based
   // on the data in the table and the provided bete (explorative behavior)
   Ptr<Ipv4Route> RouteTo(Ipv4Address source, Ipv4Address destination, double beta);
-  Neighbor RouteToNeighbor(Ipv4Address source, Ipv4Address destination, double beta);
+  OptNeighbor RouteToNeighbor(Ipv4Address source, Ipv4Address destination, double beta);
 
   // retrieves the pheromone table of a single neighbor. In case there is no
   // such entry, return a nullpointer
@@ -207,5 +230,4 @@ private:
 
 } // ant_routing
 } // ns3
-
 #endif // ANT_ROUTING_TABLE_H

@@ -20,12 +20,14 @@ class ReactiveQueue;
 class AnthocnetRouting : public Ipv4RoutingProtocol {
 
 public:
+
+  friend class ReactiveQueue;
+
   /**
    * port for exchanging anthocnet organisational messages
    */
   static constexpr uint32_t ANTHOCNET_PORT = 1012;
   static constexpr const char* TYPENAME = "ns3::ant_routing::AnthocnetRouting";
-
 
   /**
    * Type id function used to hook us up to the metaprogramming system

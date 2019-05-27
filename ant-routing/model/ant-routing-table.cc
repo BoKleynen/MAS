@@ -109,8 +109,8 @@ AntRoutingTable::RouteTo(const AntHeader& ah){
 
 Ptr<Ipv4Route>
 AntRoutingTable::RouteTo(Ipv4Address source, Ipv4Address dest, double beta) {
-
-  return RouteToNeighbor(source, dest, beta).CreateRoute(source, dest);
+  auto optNeighbor = RouteToNeighbor(source, dest, beta);
+  return optNeighbor.IsValid() ? optNeighbor.Get().CreateRoute(source, dest) : Ptr<Ipv4Route>();
   // // case that no entries in the table (no neighbors) return empty pointer
   // if (m_table->size() == 0) {
   //   return Ptr<Ipv4Route>();
@@ -137,22 +137,22 @@ AntRoutingTable::RouteTo(Ipv4Address source, Ipv4Address dest, double beta) {
   // return (neighbors.rbegin())->Get().CreateRoute(source, dest);
 }
 
-Neighbor
+OptNeighbor
 AntRoutingTable::RoutePacket(const Ipv4Header& header) {
   return RouteToNeighbor(header.GetSource(), header.GetDestination(), PacketBeta());
 }
 
-Neighbor
+OptNeighbor
 AntRoutingTable::RouteAnt(const AntHeader& header) {
   return RouteToNeighbor(header.GetSource(), header.GetDestination(), AntBeta());
 }
 
-Neighbor
+OptNeighbor
 AntRoutingTable::RouteToNeighbor(Ipv4Address source, Ipv4Address dest, double beta) {
 
     // case that no entries in the table (no neighbors) return empty pointer
     if (m_table->size() == 0) {
-      return Neighbor();
+      return OptNeighbor();
     }
 
     double totalPheromone = TotalPheromone(dest, beta);
@@ -167,13 +167,13 @@ AntRoutingTable::RouteToNeighbor(Ipv4Address source, Ipv4Address dest, double be
         accumulator += (pow(entryPtr->Value(), beta) / totalPheromone);
       }
       if (selectionPoint <= accumulator) {
-        return neighborIt->Get();
+        return OptNeighbor(neighborIt->Get());
       }
     }
 
     // return the last entry in case the loop completed.
     // This seperate case is needed to deal with rounding errors in the accumulator
-    return (neighbors.rbegin())->Get();
+    return OptNeighbor((neighbors.rbegin())->Get());
 }
 
 std::vector<Ptr<Ipv4Route>>

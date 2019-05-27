@@ -15,8 +15,11 @@ struct ReactiveQueue::ReactiveQueueEntry {
   Ipv4Address GetSource();
   Ipv4Address GetDestination();
   Time        GetSubmissionTime();
+  bool        HasEvent();
+  void        SetEvent(EventId event);
 
   Time m_submissionTime;
+  EventId m_event;
   Ptr<const Packet> m_packet;
   Ipv4Header m_header;
   uint32_t m_ingressInterfaceIndex;
@@ -29,7 +32,7 @@ ReactiveQueue::ReactiveQueueEntry::ReactiveQueueEntry(Ptr<const Packet> packet,
                                                       uint32_t ingressInterfaceIndex,
                                                       UnicastCallback ufcb,
                                                       ErrorCallback ecb)
-  : m_submissionTime(Simulator::Now()), m_packet(packet), m_header(header),
+  : m_submissionTime(Simulator::Now()), m_event(EventId()), m_packet(packet), m_header(header),
     m_ingressInterfaceIndex(ingressInterfaceIndex), m_ufcb(ufcb), m_ecb(ecb){ }
 
 Ipv4Address
@@ -45,11 +48,23 @@ ReactiveQueue::ReactiveQueueEntry::GetSubmissionTime() {
   return m_submissionTime;
 }
 
+
+bool
+ReactiveQueue::ReactiveQueueEntry::HasEvent() {
+  return m_event != EventId();
+}
+
+void
+ReactiveQueue::ReactiveQueueEntry::SetEvent(EventId event) {
+  m_event = event;
+}
+
+
 struct ReactiveQueue::ReactiveQueueImpl {
   ReactiveQueueImpl();
+
   QueueMapType m_queueMap;
 };
-
 
 ReactiveQueue::ReactiveQueueImpl::ReactiveQueueImpl()
   : m_queueMap(QueueMapType()) { }
@@ -74,9 +89,21 @@ ReactiveQueue::ReactiveQueue()
 
 ReactiveQueue::~ReactiveQueue() { }
 
+ReactiveQueue& ReactiveQueue::operator=(const ReactiveQueue& other){
+  m_impl = other.m_impl;
+  return *this;
+}
+
+ReactiveQueue::ReactiveQueue(const ReactiveQueue& other)
+  : m_impl(other.m_impl) {
+}
+
 // TODO: Check if pass by value is appropriate for an entry
 void
 ReactiveQueue::Submit(std::shared_ptr<ReactiveQueueEntry> entry, AnthocnetRouting router) {
+
+  NS_LOG_UNCOND("forwarding packet");
+
   auto source = entry -> GetSource();
   auto dest   = entry -> GetDestination();
   auto queen = router.GetAntHill().Get<ReactiveQueen>();
@@ -87,7 +114,7 @@ ReactiveQueue::Submit(std::shared_ptr<ReactiveQueueEntry> entry, AnthocnetRoutin
     m_impl -> m_queueMap[dest] = std::make_shared<PendingQueue>();
   }
   GetPendingQueue(dest)->push_back(entry);
-  PrugeQueue(dest);
+  PurgeQueue(*this, dest);
 
   ant -> Visit(router);
 }
@@ -95,7 +122,7 @@ ReactiveQueue::Submit(std::shared_ptr<ReactiveQueueEntry> entry, AnthocnetRoutin
 void
 ReactiveQueue::EntryAddedFor(Ipv4Address destination, AnthocnetRouting router) {
   // pruge all the out to date entries
-  PrugeQueue(destination);
+  PurgeQueue(*this, destination);
 
   if(!HasEntries(destination)) {
     return;
@@ -113,36 +140,73 @@ ReactiveQueue::EntryAddedFor(Ipv4Address destination, AnthocnetRouting router) {
 
 
 void
-ReactiveQueue::PrugeQueue(Ipv4Address dest) {
+PurgeQueue(ReactiveQueue rQueue, Ipv4Address dest) {
+  //
+  // NS_LOG_UNCOND("Call to purge made");
+  // NS_LOG_UNCOND("m_impl: " << rQueue.m_impl.get() << " ~~~~~~~~~~~~~~~~~~~~~~ ");
+
   // if there are no entries in the queue or no queue, no intervention needed
-  if(!HasEntries(dest)) {
+  if(!rQueue.HasEntries(dest)) {
     return;
   }
 
+  NS_LOG_UNCOND("Has entries for destination ~~~~ " <<  rQueue.GetPendingQueue(dest) -> size() << " entries total");
+
   // purge all the entries that have expired in the meantime, stop if the
   // head of the queue is fresh or there are no more entries in the queue
-  Time passedTime;
-  auto pendingQueue = GetPendingQueue(dest);
-  do {
-    pendingQueue -> pop_front();
-    auto submissionTime = pendingQueue -> front() ->GetSubmissionTime();
-    passedTime = Simulator::Now() - submissionTime;
+  // auto pendingQueue = rQueue.GetPendingQueue(dest);
+  // auto submissionTime = pendingQueue -> front() ->GetSubmissionTime();
+  // Time passedTime = Simulator::Now() - submissionTime;
+  NS_LOG_UNCOND("Current time: " << Simulator::Now().GetSeconds());
 
-  } while(HasEntries(dest) && passedTime >= TimeoutInterval());
+  // if(passedTime >= ReactiveQueue::TimeoutInterval()) {
+  //   do {
+  //     pendingQueue -> pop_front();
+  //     submissionTime = pendingQueue -> front() ->GetSubmissionTime();
+  //     passedTime = Simulator::Now() - submissionTime;
+  //     NS_LOG_UNCOND("purged entry");
+  //   } while(rQueue.HasEntries(dest) && passedTime >= ReactiveQueue::TimeoutInterval());
+  // }
+  // head of the queue is fresh or there are no more entries in the queue
+
+  auto passedTime = [] (auto pQueue) -> Time {
+    Time submissionTime = pQueue -> front() -> GetSubmissionTime();
+    return Simulator::Now() - submissionTime;
+  };
+
+  auto queueHead = [] (auto pQueue) {
+    return pQueue -> front();
+  };
+
+  auto pendingQueue = rQueue.GetPendingQueue(dest);
+  while(rQueue.HasEntries(dest)) {
+    if(passedTime(pendingQueue) < ReactiveQueue::TimeoutInterval()) {
+      break;
+    }
+    pendingQueue -> pop_front();
+    NS_LOG_UNCOND("purged entry#");
+  }
 
   // if after the purge, the queues are not empty, schedule a new scan for this entry
-  if(HasEntries(dest)) {
-    Simulator::Schedule(TimeoutInterval() - passedTime, &ReactiveQueue::PrugeQueue, this, dest);
+  if(rQueue.HasEntries(dest) && (!queueHead(pendingQueue) -> HasEvent())){
+    NS_LOG_UNCOND("scheduling next iteration in " << (ReactiveQueue::TimeoutInterval() - passedTime(pendingQueue)).GetSeconds() << " seconds");
+    auto event = Simulator::Schedule((ReactiveQueue::TimeoutInterval() - passedTime(pendingQueue)), PurgeQueue, rQueue, dest);
+    queueHead(pendingQueue) -> SetEvent(event);
   }
 }
 
+
 bool
 ReactiveQueue::HasEntries(Ipv4Address dest) {
-  return HasQueue(dest) && (m_impl -> m_queueMap[dest] -> empty());
+  return HasQueue(dest) && !(m_impl -> m_queueMap[dest] -> empty());
 }
 
 bool
 ReactiveQueue::HasQueue(Ipv4Address dest) {
+  // NS_LOG_UNCOND("nullptr impl: " << (m_impl == nullptr));
+  // NS_LOG_UNCOND("empty queue map: " << (m_impl -> m_queueMap.empty()));
+  // NS_LOG_UNCOND("destination address: " << dest);
+  // NS_LOG_UNCOND("counts for destination: " << (m_impl -> m_queueMap.size()));
   return m_impl -> m_queueMap.count(dest) != 0;
 }
 

@@ -1,6 +1,7 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 #include "ant-packet.h"
 #include "ns3/address-utils.h"
+#include "ns3/core-module.h"
 
 #define IPV4_ADDRESS_SIZE 4
 
@@ -97,6 +98,8 @@ AntHeader::AntHeader()
     m_broadcastCount (0),
     m_backwardCount (0),
     m_generation (0),
+    m_source(Ipv4Address()),
+    m_dst(Ipv4Address()),
     m_timeEstimate (Time()),
     m_visitedNodes (std::vector<Ipv4Address> ()) {}
 
@@ -121,11 +124,10 @@ AntHeader::GetInstanceTypeId () const
 uint32_t
 AntHeader::GetSerializedSize () const
 {
-  return sizeof(AntType)
-    + 3*sizeof(uint8_t) // hop count + broadcast count + backwardCount
-    + sizeof(uint32_t) // generation
-    + sizeof(Time) // time estimate
-    + (2 + m_hopCount) * IPV4_ADDRESS_SIZE;  // (2 + (m_hopCount - 1))
+  return  3*sizeof(uint8_t) // hop count + broadcast count + backwardCount
+          + sizeof(uint32_t) // generation
+          + sizeof(Time) // time estimate
+          + (2 + m_hopCount) * IPV4_ADDRESS_SIZE;  // (2 + (m_hopCount - 1))
 }
 
 void
@@ -137,8 +139,9 @@ AntHeader::Serialize (Buffer::Iterator i) const
   i.WriteU8 (m_backwardCount);
   i.WriteHtonU32 (m_generation);
   // https://www.nsnam.org/doxygen/lte-rlc-tag_8cc_source.html#l00066
-  auto nanoTime = m_timeEstimate.GetNanoSeconds();
-  i.Write((const uint8_t *) &(nanoTime), sizeof(uint64_t));
+  //auto nanoTime = m_timeEstimate.GetNanoSeconds();
+  i.WriteHtonU64(m_timeEstimate.GetInteger());
+  //i.Write((const uint8_t *) &(nanoTime), sizeof(uint64_t));
   WriteTo(i, m_source);
   WriteTo(i, m_dst);
   for (auto addr : m_visitedNodes) {
@@ -156,12 +159,14 @@ AntHeader::Deserialize (Buffer::Iterator start)
   m_backwardCount = i.ReadU8 ();
   m_generation = i.ReadNtohU32 ();
   int64_t rcvdTime;
-  i.Read ((uint8_t *)&rcvdTime, 8);
-  m_timeEstimate = NanoSeconds (rcvdTime);
+  // i.Read ((uint8_t *)&rcvdTime, 8);
+  // m_timeEstimate = NanoSeconds (rcvdTime);
+  rcvdTime = i.ReadNtohU64();
+  m_timeEstimate = Time::From(rcvdTime);
   ReadFrom(i, m_source);
   ReadFrom (i, m_dst);
   Ipv4Address addr;
-  for (int index=1; index < m_hopCount; index++) { // (m_hopCount - 1) visited nodes
+  for (int index=0; index < m_hopCount; index++) { // (m_hopCount - 1) visited nodes
     ReadFrom(i, addr);
     m_visitedNodes.push_back(addr);
   }

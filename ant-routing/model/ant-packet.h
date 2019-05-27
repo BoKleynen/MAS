@@ -124,7 +124,6 @@ public:
 
   void AddVisitedNode(Ipv4Address addr);
 
-private:
   uint8_t                   m_hopCount;
   uint8_t                   m_broadcastCount;
   uint8_t                   m_backwardCount;

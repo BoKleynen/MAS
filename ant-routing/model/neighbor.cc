@@ -83,7 +83,7 @@ Neighbor::SubmitPacket(Ptr<Ipv4Route> route, Ptr<const Packet> packet,
 void
 Neighbor::SubmitPacket(Ptr<const Packet> packet, const Ipv4Header& header, UnicastCallback callback ) {
   auto route = CreateRoute(header.GetSource(), header.GetDestination());
-  Neighbor::SubmitPacket(packet, header, callback);
+  Neighbor::SubmitPacket(route, packet, header, callback);
 }
 
 void

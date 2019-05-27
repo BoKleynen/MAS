@@ -1,5 +1,9 @@
 #include "reactive-ant.h"
 #include "ant-routing.h"
+#include "ant-routing-table.h"
+#include "ant-netdevice.h"
+#include "ant-hill.h"
+#include "backward-ant.h"
 
 namespace ns3 {
 
@@ -12,15 +16,94 @@ ReactiveAnt::ReactiveAnt(Ipv4Address source, Ipv4Address destination, uint32_t g
   m_header.SetSource(source);
   m_header.SetDestination(destination);
   m_header.SetGeneration(generation);
-  m_header.AddVisitedNode(source);
+
+  NS_LOG_UNCOND("Created reactive ant");
 }
 
-ReactiveAnt::ReactiveAnt(Ptr<Packet> packet) {
+ReactiveAnt::ReactiveAnt(Ptr<Packet> packet)
+  : m_header(AntHeader()){
 
+  packet -> RemoveHeader(m_header);
+  NS_LOG_UNCOND("received reactive ant");
 }
 
 void ReactiveAnt::Visit(AnthocnetRouting router){
-  //TODO implement
+  NS_LOG_UNCOND("visiting node with forward ant");
+
+  if(HandleAtDestination(router)){
+    return;
+  }
+
+  // geather data on the router
+  if(HandleBroadcast(router)){
+      return;
+  }
+
+  if(HandleUnicast(router)) {
+    return;
+  }
+  // error
+}
+
+bool
+ReactiveAnt::HandleAtDestination(AnthocnetRouting router) {
+  // only continue if we're at the destination
+  if(GetHeader().GetDestination() != router.GetAddress()) {
+    return false;
+  }
+
+  auto bwAnt = router.GetAntHill().Get<BackwardQueen>()->CreateFromForwardAnt(GetHeader());
+  bwAnt -> Visit(router);
+
+  return true;
+}
+
+bool
+ReactiveAnt::HandleBroadcast(AnthocnetRouting router){
+  auto routingTable = router.GetRoutingTable();
+  if(routingTable.HasPheromoneEntryFor(GetHeader().GetDestination())) {
+    return false;
+  }
+
+  auto packet = NextHopPacket(router);
+
+  BroadcastPacket(packet, router);
+
+  return true;
+}
+
+bool
+ReactiveAnt::HandleUnicast(AnthocnetRouting router) {
+  auto routingTable = router.GetRoutingTable();
+  if(!routingTable.HasPheromoneEntryFor(GetHeader().GetDestination())) {
+    return false;
+  }
+
+  auto optNeighbor = routingTable.RouteAnt(GetHeader());
+  if(!optNeighbor.IsValid()) {
+    return false;
+  }
+  auto neighbor = optNeighbor.Get();
+
+  auto packet = NextHopPacket(router);
+
+  UnicastPacket(packet, router, neighbor);
+  return true;
+}
+
+
+Ptr<Packet>
+ReactiveAnt::NextHopPacket(AnthocnetRouting router) {
+  AntHeader antHeader = GetHeader();
+  antHeader.AddVisitedNode(router.GetAddress());
+  antHeader.m_hopCount++;
+  auto device = router.GetDevice();
+  antHeader.m_timeEstimate = (device.QueueSize() + 1)*device.SendingTimeEst();
+  auto packet = Create<Packet>();
+  packet -> AddHeader(antHeader);
+  packet -> AddHeader(AntTypeHeader(species));
+
+  return packet;
 }
 
 Ptr<Packet>
@@ -28,12 +111,16 @@ ReactiveAnt::ToPacket() {
   return Ptr<Packet>();
 }
 
+
+const AntHeader&
+ReactiveAnt::GetHeader() {
+  return m_header;
+}
 //Queen implementation ---------------------------------------------------------
 // Reactive ant queen: generation info -----------------------------------------
 struct AntQueenImpl<ReactiveAnt>::GenerationInfo {
 
   GenerationInfo(const AntHeader& header);
-
   std::shared_ptr<Ant> CreateFrom(const AntTypeHeader& typeHeader, Ptr<Packet> packet);
 
   bool CanBeAdmitted(const AntHeader& header);
@@ -57,8 +144,10 @@ AntQueenImpl<ReactiveAnt>::GenerationInfo::CreateFrom(const AntTypeHeader& typeH
   packet -> PeekHeader(header);
 
   if(!HasRightAntType(typeHeader) || !CanBeAdmitted(header)) {
+    NS_LOG_UNCOND("Rejected!");
     return nullptr;
   }
+  NS_LOG_UNCOND("ACCEPTED!!!!!!!!!!");
 
   UpdateGenerationData(header);
   return std::make_shared<ReactiveAnt>(packet);
@@ -73,6 +162,10 @@ AntQueenImpl<ReactiveAnt>::GetAntType() {
 
 bool
 AntQueenImpl<ReactiveAnt>::GenerationInfo::CanBeAdmitted(const AntHeader& header) {
+  NS_LOG_UNCOND("Origin of the ant: " << header.GetSource());
+  NS_LOG_UNCOND("Generation of ant: " << header.GetGeneration() << "Current highest: " << m_generation);
+  NS_LOG_UNCOND("Time of ant: " << header.GetTimeEstimate() <<"best time: " << m_bestTime);
+  NS_LOG_UNCOND("Hop count ant: "<< (uint32_t)header.GetHopCount()<< "best count: " << static_cast<uint32_t>(m_bestHopCount));
 
   if(header.GetGeneration() < m_generation) {
     return false;
@@ -158,7 +251,7 @@ AntQueenImpl<ReactiveAnt>::~AntQueenImpl() { }
 
 
 std::shared_ptr<Ant> AntQueenImpl<ReactiveAnt>::CreateNew(Ipv4Address source, Ipv4Address dest) {
-  auto generation  = m_impl -> m_ownGeneration ++;
+  auto generation  = ++(m_impl -> m_ownGeneration); // start out with the next generation (counters start at zero)
   return std::make_shared<ReactiveAnt>(source, dest, generation);
 }
 
@@ -173,7 +266,7 @@ std::shared_ptr<Ant> AntQueenImpl<ReactiveAnt>::CreateFrom(const AntTypeHeader& 
 
   auto optInfo = m_impl -> m_generationInfo.find(header.GetSource());
   // if there is an entry for the given source
-  if(optInfo == m_impl -> m_generationInfo.end()) {
+  if(optInfo != m_impl -> m_generationInfo.end()) {
     auto info = optInfo -> second;
     return info->CreateFrom(typeHeader, packet);
   }else { // if no entry for a given sourceL create one

@@ -11,6 +11,7 @@ namespace ns3 {
 namespace ant_routing {
 
 class AnthocnetRouting;
+class Neighbor;
 
 /**
  * Interface class that define the behavior of all ants
@@ -25,6 +26,9 @@ public:
   // Each ant has a specific role to perform when it visits the node
   // it will mutate some data or log certain entries.
   virtual void Visit(AnthocnetRouting router) = 0;
+
+  void BroadcastPacket(Ptr<Packet> packet, AnthocnetRouting routing);
+  void UnicastPacket(Ptr<Packet> packet, AnthocnetRouting routing, Neighbor neighbor);
 
   // Create a packet from the given ant
   virtual Ptr<Packet> ToPacket() = 0;

@@ -1,6 +1,7 @@
 #include "send-queue-entry.h"
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
+#include "ns3/socket.h"
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE("SendQueueEntry");
@@ -37,9 +38,10 @@ UnicastQueueEntry::UnicastQueueEntry(Ptr<Ipv4Route> route, Ptr<const Packet> pac
    : SendQueueEntry(), m_route(route), m_packet(packet), m_header(header), m_unicastCallback(ufcb) { }
 
 
-void
+bool
 UnicastQueueEntry::operator()() {
   m_unicastCallback(m_route, m_packet, m_header);
+  return true;
 }
 
 Ipv4Header UnicastQueueEntry::GetHeader() {
@@ -57,14 +59,24 @@ UnicastQueueEntry::SetRoute(Ptr<Ipv4Route> route) {
 BroadcastQueueEntry::BroadcastQueueEntry(Ptr<Socket> socket, Ptr<Packet> packet, uint32_t flags, InetSocketAddress sockAddr)
   : SendQueueEntry(), m_broadcastSocket(socket), m_packet(packet), m_flags(flags), m_socketAddress(sockAddr) { }
 
-void
+bool
 BroadcastQueueEntry::operator()() {
   if(!m_broadcastSocket || !m_broadcastSocket->GetAllowBroadcast()) {
     NS_LOG_WARN("Error trying to broadcast a signal on a non broadcast socket");
-    return; // TODO log this?
+    return false; // TODO log this?
   }
 
-  m_broadcastSocket -> SendTo(m_packet, m_flags, m_socketAddress);
+  return (m_broadcastSocket -> SendTo(m_packet, m_flags, m_socketAddress)) != -1;
+}
+
+// UnicastAntQueueEntry definition ------------------------------------------------
+UnicastAntQueueEntry::UnicastAntQueueEntry(Ptr<Socket> socket, Ptr<Packet> packet,
+                      uint32_t flags, InetSocketAddress sockAddr)
+  : m_unicastSocket(socket), m_packet(packet), m_flags(flags), m_socketAddress(sockAddr) { }
+
+bool
+UnicastAntQueueEntry::operator()() {
+  return m_unicastSocket -> SendTo(m_packet, m_flags, m_socketAddress) != -1;
 }
 
 } // namespace ant_routing

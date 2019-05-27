@@ -5,6 +5,9 @@
 namespace ns3 {
 namespace ant_routing {
 
+class AntRoutingTable;
+class Neighbor;
+
 class ReactiveAnt : public Ant {
 public:
   ReactiveAnt() = default;
@@ -17,6 +20,16 @@ public:
 
   static constexpr AntType species = AntType::ReactiveForwardAnt;
 private:
+
+  const AntHeader& GetHeader();
+
+  bool HandleAtDestination(AnthocnetRouting router);
+  bool HandleBroadcast(AnthocnetRouting router);
+  bool HandleUnicast(AnthocnetRouting router);
+
+  // create a packet for the next hop
+  Ptr<Packet> NextHopPacket(AnthocnetRouting router);
+
   AntHeader m_header;
 };
 

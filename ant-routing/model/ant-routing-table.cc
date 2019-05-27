@@ -111,30 +111,6 @@ Ptr<Ipv4Route>
 AntRoutingTable::RouteTo(Ipv4Address source, Ipv4Address dest, double beta) {
   auto optNeighbor = RouteToNeighbor(source, dest, beta);
   return optNeighbor.IsValid() ? optNeighbor.Get().CreateRoute(source, dest) : Ptr<Ipv4Route>();
-  // // case that no entries in the table (no neighbors) return empty pointer
-  // if (m_table->size() == 0) {
-  //   return Ptr<Ipv4Route>();
-  // }
-  //
-  // double totalPheromone = TotalPheromone(dest, beta);
-  // double selectionPoint = GetRand();
-  // double accumulator = 0;
-  // auto neighbors = Neighbors();
-  //
-  // // loop over all entries except for the last one
-  // for(auto neighborIt = neighbors.begin(); neighborIt != --neighbors.end(); neighborIt++) {
-  //   auto entryPtr = GetPheromone(neighborIt->Address(), dest);
-  //   if (entryPtr != nullptr) {
-  //     accumulator += (pow(entryPtr->Value(), beta) / totalPheromone);
-  //   }
-  //   if (selectionPoint <= accumulator) {
-  //     return neighborIt->Get().CreateRoute(source, dest);
-  //   }
-  // }
-  //
-  // // return the last entry in case the loop completed.
-  // // This seperate case is needed to deal with rounding errors in the accumulator
-  // return (neighbors.rbegin())->Get().CreateRoute(source, dest);
 }
 
 OptNeighbor
@@ -150,8 +126,14 @@ AntRoutingTable::RouteAnt(const AntHeader& header) {
 OptNeighbor
 AntRoutingTable::RouteToNeighbor(Ipv4Address source, Ipv4Address dest, double beta) {
 
+    // if direct neighbor, no need to evaluate the pheromone table
+    auto optNeighbor = GetNeighbor(dest);
+    if(optNeighbor.IsValid()) {
+      return optNeighbor;
+    }
+
     // case that no entries in the table (no neighbors) return empty pointer
-    if (m_table->size() == 0) {
+    if (m_table->empty() || !HasPheromoneEntryFor(dest)) {
       return OptNeighbor();
     }
 
@@ -339,13 +321,18 @@ AntRoutingTable::RemoveNeighbor(const Neighbor& nb) {
   m_table->erase(nb);
 }
 
-std::pair<Neighbor, bool> AntRoutingTable::GetNeighbor(Ipv4Address addr) {
+bool
+AntRoutingTable::HasNeighbors() {
+  return !(m_table -> empty());
+}
+
+OptNeighbor AntRoutingTable::GetNeighbor(Ipv4Address addr) {
   auto neighborTableIter = m_table->find(addr);
   if (neighborTableIter != m_table->end()) {
-    return std::make_pair(neighborTableIter->first, true);
+    return OptNeighbor(neighborTableIter->first);
   }
 
-  return std::make_pair(Neighbor(), false);
+  return OptNeighbor();
 }
 
 std::vector<AlternativeRoute>

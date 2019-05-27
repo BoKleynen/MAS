@@ -7,6 +7,11 @@
 namespace ns3 {
 namespace ant_routing {
 
+BackwardAnt::BackwardAnt(const AntHeader& header) {
+  NS_LOG_UNCOND("Backward ant created!");
+}
+
+
 BackwardAnt::BackwardAnt(Ptr<Packet> packet) {
 
 }

@@ -13,6 +13,7 @@ namespace ant_routing {
 
 // forward declarations
 class AntRoutingTable;
+class AntNetDevice;
 class NeighborManager;
 class AntHill;
 class ReactiveQueue;
@@ -22,6 +23,7 @@ class AnthocnetRouting : public Ipv4RoutingProtocol {
 public:
 
   friend class ReactiveQueue;
+  friend class Ant;
 
   /**
    * port for exchanging anthocnet organisational messages
@@ -119,9 +121,15 @@ public:
    */
   virtual void PrintRoutingTable (Ptr<OutputStreamWrapper> stream, Time::Unit unit = Time::S) const override;
 
+  // return the routing table used by the protocol
   AntRoutingTable GetRoutingTable();
+  // return the neighbor manager, used to detect failure and such
   NeighborManager GetNeighborManager();
+  // return the AntNetDevice, used to send data
+  AntNetDevice GetDevice();
+  // return the ant hill, allows to generate ants
   AntHill GetAntHill();
+  // return the queue containing all the pending packets
   ReactiveQueue GetReactiveQueue();
 
   Ipv4Address GetAddress();
@@ -146,6 +154,11 @@ private:
   void InstallNeighborFactory();
   void InstallLinkFailureCallback();
 
+  // broadcasts the packet to all the neighbor of the node in an expedited way
+  void BroadcastExpedited(Ptr<Packet> packet);
+
+  Ptr<Socket> GetUnicastSocket();
+
   // input routing helper methods, returning true if they could handle the
   // given input:
 
@@ -163,6 +176,7 @@ private:
 
   uint32_t GetInterfaceIndexForDevice(Ptr<const NetDevice> device);
   bool IsBroadCastForAnthocnet(Ptr<const Packet> packet, const Ipv4Header& header);
+
   // used as a random variable stream for some actions
   static double GetRand() {
     static Ptr<UniformRandomVariable> randGen = CreateObject<UniformRandomVariable> ();

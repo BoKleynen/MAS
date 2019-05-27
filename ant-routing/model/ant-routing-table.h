@@ -153,10 +153,10 @@ public:
   // neighbor management:
   void AddNeighbor(const Neighbor& nb);
   void RemoveNeighbor(const Neighbor& nb);
-
+  bool HasNeighbors();
   // returns the neighbor corresponding to the provided IP address
   // boolean indicates whether there was an entry for the neighbor
-  std::pair<Neighbor, bool> GetNeighbor(Ipv4Address addr);
+  OptNeighbor GetNeighbor(Ipv4Address addr);
 
   // returns neighbor-pheromone pairs for all the destinations for which
   // the given neighbor was the best route

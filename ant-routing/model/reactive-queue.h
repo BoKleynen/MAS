@@ -28,10 +28,16 @@ using ErrorCallback   = Ipv4RoutingProtocol::ErrorCallback;
 // entry in the routing table (unicast packets only)
 class ReactiveQueue {
 public:
+
+  friend void PurgeQueue(ReactiveQueue rQueue, Ipv4Address dest);
+
   struct ReactiveQueueEntry;
 
   ReactiveQueue();
+  ReactiveQueue(const ReactiveQueue& other);
   virtual ~ReactiveQueue();
+
+  ReactiveQueue& operator=(const ReactiveQueue& other);
 
   void Submit(std::shared_ptr<ReactiveQueueEntry> entry, AnthocnetRouting router);
   void EntryAddedFor(Ipv4Address destination, AnthocnetRouting router);
@@ -45,8 +51,6 @@ private:
   using PendingQueue = std::list<std::shared_ptr<ReactiveQueueEntry>>;
   using QueueMapType = std::map<Ipv4Address, std::shared_ptr<PendingQueue>>;
 
-  // purge all the old entries from the queue
-  void PrugeQueue(Ipv4Address address);
   // checks if there are any entries for the given destination address
   // returns true both in case the there is no queue for the address
   // or there are no pending packets in the queue for the address
@@ -65,6 +69,9 @@ private:
 
   std::shared_ptr<ReactiveQueueImpl> m_impl;
 };
+
+// purge all the old entries from the queue
+void PurgeQueue(ReactiveQueue rQueue, Ipv4Address address);
 
 std::shared_ptr<ReactiveQueue::ReactiveQueueEntry>
 MakeReactiveQueueEntry( Ptr<const Packet> packet, const Ipv4Header& header,

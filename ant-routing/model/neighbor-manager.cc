@@ -73,12 +73,12 @@ NeighborManager::~NeighborManager() {}
 void
 NeighborManager::HelloReceived(const HelloHeader& header) {
   auto sender = header.GetSource();
-  auto neighborPair = m_impl -> m_routingTable.GetNeighbor(sender);
-  auto neighbor = neighborPair.first;
+  auto optNeighbor = m_impl -> m_routingTable.GetNeighbor(sender);
+  auto neighbor = optNeighbor.Get();
 
-  NS_LOG_UNCOND("Received hello at neighbor manager, neighbor present? " << neighborPair.second);
+  NS_LOG_UNCOND("Received hello at neighbor manager, neighbor present? " << optNeighbor.IsValid());
 
-  if(!neighborPair.second) {
+  if(!optNeighbor.IsValid()) {
     neighbor = AddNeighbor(sender);
   }
   neighbor.FailureDetector() -> HelloReceived(header);

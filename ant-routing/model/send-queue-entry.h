@@ -23,7 +23,8 @@ public:
   SendQueueEntry();
 
   // call operator, each queue entry should be callable (regardless of the type)
-  virtual void operator()() = 0;
+  // call executes the entry in the send queue. Returning a boolean indicating success
+  virtual bool operator()() = 0;
 
   bool Sending();
   void Sending(bool sending);
@@ -40,7 +41,7 @@ private:
 struct UnicastQueueEntry : public SendQueueEntry {
 public:
   UnicastQueueEntry( Ptr<Ipv4Route> route, Ptr<const Packet> packet,const Ipv4Header& header,  UnicastCallback ufcb);
-  virtual void operator()() override;
+  virtual bool operator()() override;
 
   Ipv4Header GetHeader();
   void SetRoute(Ptr<Ipv4Route> route);
@@ -55,8 +56,8 @@ private:
 
 struct BroadcastQueueEntry : public SendQueueEntry {
 public:
-  BroadcastQueueEntry(Ptr<Socket> socket, Ptr<Packet> packet, uint32_t flags, InetSocketAddress sockaddr);
-  virtual void operator()() override;
+  BroadcastQueueEntry(Ptr<Socket> socket, Ptr<Packet> packet, uint32_t flags, InetSocketAddress sockAddr);
+  virtual bool operator()() override;
 private:
   Ptr<Socket> m_broadcastSocket;
   Ptr<Packet> m_packet;
@@ -68,6 +69,19 @@ template<typename T, typename ...Args>
 std::shared_ptr<SendQueueEntry> MakeSendQueueEntry(Args...args) {
   return std::make_shared<T>(std::forward<Args>(args)...);
 }
+
+// unicasting for ants: doesn't get routed in the same way as regular packets
+// since they need to travel hop by hop
+struct UnicastAntQueueEntry : public SendQueueEntry {
+public:
+  UnicastAntQueueEntry(Ptr<Socket> socket, Ptr<Packet> packet, uint32_t flags, InetSocketAddress sockAddr);
+  virtual bool operator()() override;
+private:
+  Ptr<Socket> m_unicastSocket;
+  Ptr<Packet> m_packet;
+  uint32_t m_flags;
+  InetSocketAddress m_socketAddress;
+};
 
 } // namespace ant_routing
 } // namespace ns3

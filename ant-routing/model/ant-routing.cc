@@ -120,6 +120,11 @@ AnthocnetRouting::GetRoutingTable() {
   return m_impl -> m_routingTable;
 }
 
+AntNetDevice
+AnthocnetRouting::GetDevice() {
+  return m_impl -> m_device;
+}
+
 AntHill
 AnthocnetRouting::GetAntHill() {
   return m_impl -> m_antHill;
@@ -129,6 +134,12 @@ ReactiveQueue
 AnthocnetRouting::GetReactiveQueue() {
   return m_impl -> m_reactiveQueue;
 }
+
+Ptr<Socket>
+AnthocnetRouting::GetUnicastSocket() {
+  return m_impl -> m_socket;
+}
+
 
 // we route all the output back to the device such that it becomes
 // ingress traffic and be queued.
@@ -143,7 +154,7 @@ Ptr<Ipv4Route> AnthocnetRouting::RouteOutput (Ptr<Packet> p,
   route->SetGateway(Ipv4Address(localhost));
   route->SetOutputDevice(m_impl -> m_loopback);
 
-  NS_LOG_UNCOND("routing output packet: " << p);
+  //NS_LOG_UNCOND("routing output packet: " << p);
 
   return route;
 }
@@ -157,13 +168,13 @@ AnthocnetRouting::RouteInput  (Ptr<const Packet> packet,
   NS_ASSERT (packet != 0);
   NS_ASSERT (m_impl -> m_ipv4->GetInterfaceForDevice (ingressDevice) >= 0);
 
-  NS_LOG_UNCOND("routing input");
+  NS_LOG_UNCOND("routing input: from " << header.GetSource() << " to: " << header.GetDestination());
 
   // auto source = header.GetSource();
   // auto dest   = header.GetDestination();
 
-  NS_LOG_UNCOND("ipv4 header: " << header);
-  NS_LOG_UNCOND("Broadcast allowed" << m_impl -> m_broadcastSocket -> GetAllowBroadcast ());
+  // NS_LOG_UNCOND("ipv4 header: " << header);
+  // NS_LOG_UNCOND("Broadcast allowed" << m_impl -> m_broadcastSocket -> GetAllowBroadcast ());
 
   uint32_t ingressInterfaceIndex = GetInterfaceIndexForDevice(ingressDevice);
 
@@ -232,10 +243,13 @@ AnthocnetRouting::HandleIngressForward(Ptr<const Packet> packet,
                             UnicastForwardCallback ufcb, ErrorCallback ecb) {
   auto optNeighbor = GetRoutingTable().RoutePacket(header);
   if(optNeighbor.IsValid()) {
+    NS_LOG_UNCOND("Valid entry found in the routing table");
     optNeighbor.Get().SubmitPacket(packet, header, ufcb);
-  }else{
+  }else if(GetRoutingTable().HasNeighbors()) {
     // enqueue the packets for reactive ants!
     GetReactiveQueue().Submit(MakeReactiveQueueEntry(packet, header, ingressInterfaceIndex, ufcb, ecb), *this);
+  } else {
+    ecb(packet, header, Socket::SocketErrno::ERROR_NOROUTETOHOST);
   }
   return true;
 }
@@ -257,7 +271,7 @@ AnthocnetRouting::GetInterfaceIndexForDevice(Ptr<const NetDevice> device) {
 }
 
 void AnthocnetRouting::NotifyInterfaceUp (uint32_t interface) {
-  NS_LOG_UNCOND("Interface up: " << interface);
+  //NS_LOG_UNCOND("Interface up: " << interface);
 
   // once we have registered the device, we do not want an extra device to be attached.
   // TODO maybe just ignore instead of stopping the simulation
@@ -395,7 +409,13 @@ AnthocnetRouting::HelloTimerExpire() {
   m_impl -> m_device.SubmitExpedited(MakeSendQueueEntry<BroadcastQueueEntry>(m_impl->m_broadcastSocket, packet, 0, InetSocketAddress(m_impl -> m_ifAddress.GetBroadcast(), ANTHOCNET_PORT)));
   // m_impl -> m_broadcastSocket -> SendTo(packet, 0, InetSocketAddress(m_impl->m_ifAddress.GetBroadcast(), ANTHOCNET_PORT));
   m_impl -> m_helloTimer.Schedule(s_helloInterval);
-  NS_LOG_UNCOND("Sent hello packet from: " << m_impl -> m_ifAddress.GetLocal() << "to: " << m_impl -> m_ifAddress.GetBroadcast());
+  NS_LOG_UNCOND("Sent hello packet from: " << m_impl -> m_ifAddress.GetLocal() << " to: " << m_impl -> m_ifAddress.GetBroadcast());
+}
+
+
+void
+AnthocnetRouting::BroadcastExpedited(Ptr<Packet> packet) {
+    m_impl -> m_device.SubmitExpedited(MakeSendQueueEntry<BroadcastQueueEntry>(m_impl->m_broadcastSocket, packet, 0, InetSocketAddress(m_impl -> m_ifAddress.GetBroadcast(), ANTHOCNET_PORT)));
 }
 
 void

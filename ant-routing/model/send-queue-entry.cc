@@ -70,14 +70,16 @@ BroadcastQueueEntry::operator()() {
 }
 
 // UnicastAntQueueEntry definition ------------------------------------------------
-UnicastAntQueueEntry::UnicastAntQueueEntry(Ptr<Socket> socket, Ptr<Packet> packet,
-                      uint32_t flags, InetSocketAddress sockAddr)
-  : m_unicastSocket(socket), m_packet(packet), m_flags(flags), m_socketAddress(sockAddr) { }
-
-bool
-UnicastAntQueueEntry::operator()() {
-  return m_unicastSocket -> SendTo(m_packet, m_flags, m_socketAddress) != -1;
-}
+// UnicastAntQueueEntry::UnicastAntQueueEntry(Ptr<Socket> socket, Ptr<Packet> packet,
+//                       uint32_t flags, InetSocketAddress sockAddr)
+//   : m_unicastSocket(socket), m_packet(packet), m_flags(flags), m_socketAddress(sockAddr) { }
+//
+// bool
+// UnicastAntQueueEntry::operator()() {
+//   auto error =  m_unicastSocket -> SendTo(m_packet, m_flags, m_socketAddress);
+//   NS_LOG_UNCOND("Error code returned after sending: " << error << "--------------");
+//   return error != -1;
+// }
 
 } // namespace ant_routing
 } // namespace ns3

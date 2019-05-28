@@ -17,7 +17,7 @@ ReactiveAnt::ReactiveAnt(Ipv4Address source, Ipv4Address destination, uint32_t g
   m_header.SetDestination(destination);
   m_header.SetGeneration(generation);
 
-  NS_LOG_UNCOND("Created reactive ant");
+  NS_LOG_UNCOND("Created reactive ant: " << source << "to: " << destination);
 }
 
 ReactiveAnt::ReactiveAnt(Ptr<Packet> packet)
@@ -51,6 +51,7 @@ ReactiveAnt::HandleAtDestination(AnthocnetRouting router) {
   if(GetHeader().GetDestination() != router.GetAddress()) {
     return false;
   }
+  m_header.AddVisitedNode(router.GetAddress());
 
   auto bwAnt = router.GetAntHill().Get<BackwardQueen>()->CreateFromForwardAnt(GetHeader());
   bwAnt -> Visit(router);
@@ -97,7 +98,6 @@ ReactiveAnt::NextHopPacket(AnthocnetRouting router) {
   AntHeader antHeader = GetHeader();
   antHeader.AddVisitedNode(router.GetAddress());
   antHeader.m_hopCount++;
-  antHeader.m_visitedSize++;
   auto device = router.GetDevice();
   antHeader.m_timeEstimate = (device.QueueSize() + 1)*device.SendingTimeEst();
   auto packet = Create<Packet>();
@@ -145,10 +145,8 @@ AntQueenImpl<ReactiveAnt>::GenerationInfo::CreateFrom(const AntTypeHeader& typeH
   packet -> PeekHeader(header);
 
   if(!HasRightAntType(typeHeader) || !CanBeAdmitted(header)) {
-    NS_LOG_UNCOND("Rejected!");
     return nullptr;
   }
-  NS_LOG_UNCOND("ACCEPTED!!!!!!!!!!");
 
   UpdateGenerationData(header);
   return std::make_shared<ReactiveAnt>(packet);

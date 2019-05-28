@@ -24,7 +24,10 @@ public:
   NeighborManager(const AntRoutingTable& routingTable, NeighborFactoryFunction neighborFactory, LinkFailureCallback failureCallback);
   virtual ~NeighborManager();
 
+  // informs the Neighbor manager that a hello packet was received
   void HelloReceived(const HelloHeader& Header);
+  // informs the Neighbor manager that a message was received from the given address (non hello)
+  void OtherMessageReceived(const Ipv4Address& source, const Ipv4InterfaceAddress& ifAddress);
 
   AntRoutingTable RoutingTable();
   void RoutingTable(AntRoutingTable table);

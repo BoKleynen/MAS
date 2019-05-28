@@ -15,8 +15,9 @@ HelloAnt::HelloAnt(Ptr<Packet> packet) {
 
 void
 HelloAnt::Visit(AnthocnetRouting router) {
-  NS_LOG_UNCOND("Received hello at: " << router.GetAddress() << " time: " << Simulator::Now().GetSeconds());
+  NS_LOG_UNCOND(router.GetAddress() << "@" << Simulator::Now().GetSeconds() << ": received hello from: " << m_header.GetSource());
   NS_LOG_UNCOND("source: " << m_header.GetSource());
+
   router.GetNeighborManager().HelloReceived(m_header);
   // the routingtable should contain the neighbor we just received.
   NS_LOG_UNCOND(router.GetRoutingTable().Neighbors().size());

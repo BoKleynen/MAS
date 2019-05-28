@@ -70,18 +70,18 @@ std::shared_ptr<SendQueueEntry> MakeSendQueueEntry(Args...args) {
   return std::make_shared<T>(std::forward<Args>(args)...);
 }
 
-// unicasting for ants: doesn't get routed in the same way as regular packets
-// since they need to travel hop by hop
-struct UnicastAntQueueEntry : public SendQueueEntry {
-public:
-  UnicastAntQueueEntry(Ptr<Socket> socket, Ptr<Packet> packet, uint32_t flags, InetSocketAddress sockAddr);
-  virtual bool operator()() override;
-private:
-  Ptr<Socket> m_unicastSocket;
-  Ptr<Packet> m_packet;
-  uint32_t m_flags;
-  InetSocketAddress m_socketAddress;
-};
+// // unicasting for ants: doesn't get routed in the same way as regular packets
+// // since they need to travel hop by hop
+// struct UnicastAntQueueEntry : public SendQueueEntry {
+// public:
+//   UnicastAntQueueEntry(Ptr<Socket> socket, Ptr<Packet> packet, uint32_t flags, InetSocketAddress sockAddr);
+//   virtual bool operator()() override;
+// private:
+//   Ptr<Socket> m_unicastSocket;
+//   Ptr<Packet> m_packet;
+//   uint32_t m_flags;
+//   InetSocketAddress m_socketAddress;
+// };
 
 } // namespace ant_routing
 } // namespace ns3

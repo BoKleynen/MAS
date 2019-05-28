@@ -84,6 +84,16 @@ NeighborManager::HelloReceived(const HelloHeader& header) {
   neighbor.FailureDetector() -> HelloReceived(header);
 }
 
+void
+NeighborManager::OtherMessageReceived(const Ipv4Address& source, const Ipv4InterfaceAddress& ifAddr) {
+  if(source.IsBroadcast() || source == ifAddr.GetBroadcast()) {
+    return; // no broadcast neighbor
+  }
+
+  HelloReceived(HelloHeader(source));
+}
+
+
 Neighbor
 NeighborManager::AddNeighbor(Ipv4Address address) {
   Neighbor neighbor = m_impl -> m_neighborFactory(address);

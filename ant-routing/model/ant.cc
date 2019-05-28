@@ -20,7 +20,9 @@ Ant::UnicastPacket(Ptr<Packet> packet, AnthocnetRouting router, Neighbor neighbo
     NS_LOG_UNCOND("Socket uninialized while trying to unicast a packet");
     return;
   }
-  neighbor.SubmitExpedited<UnicastAntQueueEntry>(socket, packet, 0, InetSocketAddress(neighbor.Address(), AnthocnetRouting::ANTHOCNET_PORT));
+
+  packet -> AddPacketTag(ExpeditedTag());
+  socket -> SendTo(packet, 0, InetSocketAddress(neighbor.Address(), AnthocnetRouting::ANTHOCNET_PORT));
 }
 
 

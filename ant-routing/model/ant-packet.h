@@ -114,7 +114,7 @@ public:
 
   void SetHopCount(uint8_t hopCount);
   void SetBroadcastCount(uint8_t broadcastCount);
-  void SetVisitedSize(uint8_t backwardCount);
+  // void SetVisitedSize(uint8_t backwardCount);
   void SetGeneration(uint32_t generation);
   void SetSource(Ipv4Address source);
   void SetDestination(Ipv4Address dest);
@@ -123,6 +123,7 @@ public:
   void SetVisitedNodes(std::vector<Ipv4Address>&& visited);
 
   void AddVisitedNode(Ipv4Address addr);
+  void PopVisitedNode();
 
   uint8_t                   m_hopCount;
   uint8_t                   m_broadcastCount;

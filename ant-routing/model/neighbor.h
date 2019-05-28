@@ -44,23 +44,23 @@ public:
   // param header:    Ipv4 header containing information about the packet for the network layer
   // param callback:  Callback function to be called once the packet is to be sumbitted
   void SubmitPacket(Ptr<Ipv4Route> route, Ptr<const Packet> packet, const Ipv4Header &header, UnicastCallback callback);
-  void SubmitPacket(Ptr<const Packet> packet, const Ipv4Header& header, UnicastCallback);
+  void SubmitPacket(Ptr<const Packet> packet, const Ipv4Header& header, UnicastCallback callback);
   // submits a packet to the destination, using the expedited lane. (used for ants for example)
   void SubmitExpeditedPacket(Ptr<Ipv4Route> route, Ptr<const Packet> packet, const Ipv4Header &header, UnicastCallback callback);
-
-  template<typename SendQueueType, typename ...Args>
-  void Submit(Args...args) {
-    auto queueEntry = std::make_shared<SendQueueType>(std::forward<Args>(args)...);
-    auto dev = AntDevice();
-    dev.Submit(queueEntry);
-  }
-
-  template<typename SendQueueType, typename ...Args>
-  void SubmitExpedited(Args...args) {
-    auto queueEntry = std::make_shared<SendQueueType>(std::forward<Args>(args)...);
-    auto dev = AntDevice();
-    dev.SubmitExpedited(queueEntry);
-  }
+  void SubmitExpeditedPacket(Ptr<const Packet> packet, const Ipv4Header& header, UnicastCallback callback);
+  // template<typename SendQueueType, typename ...Args>
+  // void Submit(Args...args) {
+  //   auto queueEntry = std::make_shared<SendQueueType>(std::forward<Args>(args)...);
+  //   auto dev = AntDevice();
+  //   dev.Submit(queueEntry);
+  // }
+  //
+  // template<typename SendQueueType, typename ...Args>
+  // void SubmitExpedited(Args...args) {
+  //   auto queueEntry = std::make_shared<SendQueueType>(std::forward<Args>(args)...);
+  //   auto dev = AntDevice();
+  //   dev.SubmitExpedited(queueEntry);
+  // }
 
   std::shared_ptr<NeighborFailureDetector> FailureDetector();
   void FailureDetector(std::shared_ptr<NeighborFailureDetector> detector);

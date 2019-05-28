@@ -168,7 +168,7 @@ AnthocnetRouting::RouteInput  (Ptr<const Packet> packet,
   NS_ASSERT (packet != 0);
   NS_ASSERT (m_impl -> m_ipv4->GetInterfaceForDevice (ingressDevice) >= 0);
 
-  NS_LOG_UNCOND("routing input: from " << header.GetSource() << " to: " << header.GetDestination());
+  NS_LOG_UNCOND("router " << GetAddress() << "@" << Simulator::Now().GetSeconds()<< " s : routing input: from " << header.GetSource() << " to: " << header.GetDestination());
 
   // auto source = header.GetSource();
   // auto dest   = header.GetDestination();
@@ -242,10 +242,33 @@ AnthocnetRouting::HandleIngressForward(Ptr<const Packet> packet,
                             const Ipv4Header& header, uint32_t ingressInterfaceIndex,
                             UnicastForwardCallback ufcb, ErrorCallback ecb) {
   auto optNeighbor = GetRoutingTable().RoutePacket(header);
+  NS_LOG_UNCOND("router " << GetAddress() << "@" << Simulator::Now().GetSeconds()<< " s : routing input: from " << header.GetSource() << " to: " << header.GetDestination() << " - Ingress");
+  NS_LOG_UNCOND("has routing table entry for " << header.GetDestination() << ": " << GetRoutingTable().HasPheromoneEntryFor(header.GetDestination()));
+
+
   if(optNeighbor.IsValid()) {
+
     NS_LOG_UNCOND("Valid entry found in the routing table");
-    optNeighbor.Get().SubmitPacket(packet, header, ufcb);
-  }else if(GetRoutingTable().HasNeighbors()) {
+
+    ExpeditedTag tag;
+    if(packet -> PeekPacketTag(tag)) {
+      NS_LOG_UNCOND("Expedited Tag detected ---------------------");
+      optNeighbor.Get().SubmitExpeditedPacket(packet, header, ufcb);
+    } else {
+      NS_LOG_UNCOND("Ordinary packet ------------------------------");
+      optNeighbor.Get().SubmitPacket(packet, header, ufcb);
+      NS_LOG_UNCOND("Sumbitted ordinary packet --------------------");
+    }
+
+    return true;
+  }
+
+  if(GetRoutingTable().HasNeighbors()) {
+    NS_LOG_UNCOND("Setting up reactive ants");
+    auto neighbors = GetRoutingTable().Neighbors();
+    for(auto neighborIt = neighbors.begin(); neighborIt != neighbors.end(); neighborIt ++) {
+      NS_LOG_UNCOND("neighbor of " << GetAddress() << ": " << neighborIt -> Address());
+    }
     // enqueue the packets for reactive ants!
     GetReactiveQueue().Submit(MakeReactiveQueueEntry(packet, header, ingressInterfaceIndex, ufcb, ecb), *this);
   } else {

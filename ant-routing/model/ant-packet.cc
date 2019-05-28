@@ -213,9 +213,9 @@ void AntHeader::SetHopCount(uint8_t hopCount) {
 void AntHeader::SetBroadcastCount(uint8_t broadcastCount) {
   m_broadcastCount = broadcastCount;
 }
-void AntHeader::SetVisitedSize(uint8_t backwardCount) {
-  m_visitedSize = backwardCount;
-}
+// void AntHeader::SetVisitedSize(uint8_t backwardCount) {
+//   m_visitedSize = backwardCount;
+// }
 void AntHeader::SetGeneration(uint32_t generation) {
   m_generation = generation;
 }
@@ -237,7 +237,15 @@ void AntHeader::SetVisitedNodes(std::vector<Ipv4Address>&& visited) {
 
 void AntHeader::AddVisitedNode(Ipv4Address addr) {
   m_visitedNodes.push_back(addr);
+  m_visitedSize++;
 }
+
+void AntHeader::PopVisitedNode() {
+  m_visitedNodes.pop_back();
+  m_visitedSize--;
+}
+
+
 // Hello header definition -----------------------------------------------------
 
 HelloHeader::HelloHeader() : m_source(Ipv4Address()) { }

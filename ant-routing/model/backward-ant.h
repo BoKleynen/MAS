@@ -26,7 +26,7 @@ public:
   static constexpr AntType species = AntType::BackwardAnt;
 private:
   // getter for the header
-  AntHeader GetHeader();
+  const AntHeader& GetHeader();
   // updates metrics such as hop count and travel time
   void UpdateDistanceMetrics(AnthocnetRouting router);
   // updates the routing table
@@ -41,6 +41,9 @@ private:
   // handle the case where the backward ant is at the target
   // of the forward ant
   void HandleAtDestination(AnthocnetRouting router);
+
+  // handle the case whre the backward ant is at the source of the forward ant
+  void HandleAtSource(AnthocnetRouting router);
 
   AntHeader m_header;
 };

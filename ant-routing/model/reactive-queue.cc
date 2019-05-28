@@ -2,6 +2,7 @@
 #include "ant-routing.h"
 #include "ant-hill.h"
 #include "reactive-ant.h"
+#include "ant-routing-table.h"
 
 namespace ns3 {
 namespace ant_routing {
@@ -104,17 +105,16 @@ ReactiveQueue::Submit(std::shared_ptr<ReactiveQueueEntry> entry, AnthocnetRoutin
 
   NS_LOG_UNCOND("forwarding packet");
 
-  auto source = entry -> GetSource();
   auto dest   = entry -> GetDestination();
   auto queen = router.GetAntHill().Get<ReactiveQueen>();
-  auto ant = queen->CreateNew(source, dest);
+  auto ant = queen->CreateNew(router.GetAddress(), dest);
 
   // place the entry in the queue
   if(!HasQueue(dest)) {
     m_impl -> m_queueMap[dest] = std::make_shared<PendingQueue>();
   }
-  GetPendingQueue(dest)->push_back(entry);
   PurgeQueue(*this, dest);
+  GetPendingQueue(dest)->push_back(entry);
 
   ant -> Visit(router);
 }
@@ -125,17 +125,23 @@ ReactiveQueue::EntryAddedFor(Ipv4Address destination, AnthocnetRouting router) {
   PurgeQueue(*this, destination);
 
   if(!HasEntries(destination)) {
+    NS_LOG_UNCOND("Has no entries yet for the destination");
     return;
   }
+
+  NS_LOG_UNCOND("Received added entry callback ------------------ ");
+  NS_LOG_UNCOND(router.GetAddress() << "has pheromone value for: " << destination  << ": " << router.GetRoutingTable().HasPheromoneEntryFor(destination));
 
   // in case there are entries, we'll re-ingest the packets into the router
   auto pendingQueue = GetPendingQueue(destination);
   for(auto entryIt = pendingQueue->begin(); entryIt != pendingQueue->end(); entryIt++) {
+    NS_LOG_UNCOND("sending ingress traffic");
     auto entry = (*entryIt);
     router.HandleIngressForward( entry -> m_packet, entry -> m_header,
                                  entry -> m_ingressInterfaceIndex, entry -> m_ufcb,
                                  entry -> m_ecb);
   }
+  pendingQueue -> clear();
 }
 
 
@@ -149,7 +155,7 @@ PurgeQueue(ReactiveQueue rQueue, Ipv4Address dest) {
   if(!rQueue.HasEntries(dest)) {
     return;
   }
-
+  NS_ASSERT(rQueue.GetPendingQueue(dest) -> size() < 10);
   NS_LOG_UNCOND("Has entries for destination ~~~~ " <<  rQueue.GetPendingQueue(dest) -> size() << " entries total");
 
   // purge all the entries that have expired in the meantime, stop if the

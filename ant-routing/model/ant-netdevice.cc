@@ -256,14 +256,18 @@ AntNetDevice::Submit(std::shared_ptr<SendQueueEntry> entry) {
     return; // drop the packet. TODO do we add a trace source for this?
   }
 
+  NS_LOG_UNCOND("Submitted normal packet");
+
   m_impl -> SubmitTo(entry, m_impl -> m_stdQueue);
 }
 
 void
 AntNetDevice::SubmitExpedited(std::shared_ptr<SendQueueEntry> entry) {
-  if(m_impl -> m_stdQueue.size() > MaxQueueSize()) {
+  if(m_impl -> m_fastQueue.size() > MaxQueueSize()) {
     return;
   }
+
+  NS_LOG_UNCOND("Submitted expedited entry, queue size: " << m_impl -> m_fastQueue.size());
 
   m_impl -> SubmitTo(entry, m_impl -> m_fastQueue);
 }
@@ -298,6 +302,39 @@ AntNetDevice::GetAlpha() {
 void
 AntNetDevice::SetAlpha(double alpha) {
   s_alpha = alpha;
+}
+
+ExpeditedTag::ExpeditedTag(uint8_t expedited)
+  : m_expedited(expedited) {
+
+  }
+bool ExpeditedTag::IsExpedited() const {
+  return m_expedited != 0;
+}
+
+TypeId ExpeditedTag::GetTypeId() {
+  static TypeId tid = TypeId ("ns3::ant_routing::ExpeditedTag")
+    .SetParent<Tag> ()
+    .SetGroupName ("AntRouting")
+    .AddConstructor<ExpeditedTag> ()
+  ;
+  return tid;
+}
+TypeId ExpeditedTag::GetInstanceTypeId() const {
+  return GetTypeId();
+}
+uint32_t ExpeditedTag::GetSerializedSize() const {
+  return sizeof(uint8_t);
+}
+void ExpeditedTag::Serialize(TagBuffer i) const {
+  i.WriteU8(m_expedited);
+}
+
+void ExpeditedTag::Deserialize(TagBuffer i) {
+  m_expedited = i.ReadU8();
+}
+void ExpeditedTag::Print(std::ostream &os) const {
+  os << "Do don't do that around here";
 }
 
 } // namespace ant_routing

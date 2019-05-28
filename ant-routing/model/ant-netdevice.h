@@ -51,6 +51,21 @@ private:
   std::shared_ptr<AntNetDeviceImpl> m_impl;
 };
 
+class ExpeditedTag : public Tag {
+public:
+  ExpeditedTag(uint8_t expedited = 1);
+  bool IsExpedited() const;
+  static TypeId GetTypeId();
+  virtual TypeId GetInstanceTypeId () const override;
+  virtual uint32_t GetSerializedSize() const override;
+  virtual void Serialize(TagBuffer i) const override;
+  virtual void Deserialize(TagBuffer i) override;
+  virtual void Print(std::ostream &os) const override;
+private:
+  // expeditedif m_expedited != 0
+  uint8_t m_expedited;
+};
+
 } // namespace ant_routing
 } // namespace ns3
 

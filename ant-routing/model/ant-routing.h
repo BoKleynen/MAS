@@ -138,6 +138,10 @@ public:
   static void SetHelloTimerInterval(Time interval);
   static Time GetHelloTimerInterval();
 
+  // Probability of sending a proactive ant
+  static void SetProactiveProbability(double probability);
+  static double GetProactiveProbability();
+
 protected:
   virtual void DoInitialize() override;
 private:
@@ -176,6 +180,10 @@ private:
 
   uint32_t GetInterfaceIndexForDevice(Ptr<const NetDevice> device);
   bool IsBroadCastForAnthocnet(Ptr<const Packet> packet, const Ipv4Header& header);
+  bool IsUnicastForAnthocnet(Ptr<const Packet> packet, const Ipv4Header& header);
+  bool IsUdpForAnthocnet(Ptr<const Packet> packet, const Ipv4Header& header);
+
+  void MaybeSendProactiveAnt(Ptr<const Packet> packet, const Ipv4Header& header);
 
   // used as a random variable stream for some actions
   static double GetRand() {
@@ -184,6 +192,7 @@ private:
   }
   // statics
   static Time s_helloInterval;
+  static double s_proactiveProbability;
   // constants:
   static constexpr const char* localhost = "127.0.0.1";
 

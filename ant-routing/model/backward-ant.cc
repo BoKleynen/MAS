@@ -5,6 +5,7 @@
 #include "ant-netdevice.h"
 #include "ant-routing-table.h"
 #include "reactive-queue.h"
+#include "neighbor-manager.h"
 
 namespace ns3 {
 namespace ant_routing {
@@ -32,11 +33,14 @@ BackwardAnt::Visit(AnthocnetRouting router) {
     NS_LOG_UNCOND("Launched from destination ----------------------");
     HandleAtDestination(router);
   } else if(router.GetAddress() == GetHeader().GetSource()) {
+    HandleNeighborship(router);
     NS_LOG_UNCOND("Arrived at source ------------------------------");
-    NS_ASSERT(GetHeader().GetVisitedSize() == 2); // has at least two entries source + previous
+    NS_ASSERT_MSG(GetHeader().GetVisitedSize() == 2, "Received a backward ant with: " << m_header.m_visitedNodes.size() << "entries"); // has at least two entries source + previous
     HandleAtSource(router);
   } else {
     NS_LOG_UNCOND("Intermediary node ------------------------------");
+    NS_ASSERT_MSG(GetHeader().GetVisitedSize() >= 3, "Received a backward ant with: " << m_header.m_visitedNodes.size() << "entries");
+    HandleNeighborship(router);
     UpdateDistanceMetrics(router);
     UpdateRoutingTable(router);
     ReleasePending(router);
@@ -52,8 +56,20 @@ BackwardAnt::GetHeader() {
 }
 
 void
+BackwardAnt::HandleNeighborship(AnthocnetRouting router) {
+  auto addr = m_header.m_visitedNodes.back();
+  if(addr == router.GetAddress()) {
+    NS_LOG_UNCOND("!Received message with cycle to current router!");
+    return; // we do not want to add ourselves as a neighbor
+  }
+
+  router.GetNeighborManager().OtherMessageReceived(addr, router.GetInterfaceAddress());
+
+}
+
+void
 BackwardAnt::HandleAtDestination(AnthocnetRouting router) {
-  NS_ASSERT(GetHeader().GetVisitedSize() > 1); // has at least two entries source + destination
+  NS_ASSERT(GetHeader().GetVisitedSize() >= 2); // has at least two entries source + destination
   auto nxt = m_header.m_visitedNodes[m_header.GetVisitedSize() - 2];
   auto optNeighbor = router.GetRoutingTable().GetNeighbor(nxt);
 
@@ -70,7 +86,7 @@ BackwardAnt::HandleAtDestination(AnthocnetRouting router) {
 
 void
 BackwardAnt::HandleAtSource(AnthocnetRouting router) {
-  NS_ASSERT(GetHeader().GetVisitedSize() > 1); // has exactly two entries: source + previous
+  NS_ASSERT(GetHeader().GetVisitedSize() == 2); // has exactly two entries: source + previous
   UpdateDistanceMetrics(router);
   UpdateRoutingTable(router);
   ReleasePending(router);

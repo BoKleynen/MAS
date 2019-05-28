@@ -125,7 +125,6 @@ ReactiveQueue::EntryAddedFor(Ipv4Address destination, AnthocnetRouting router) {
   PurgeQueue(*this, destination);
 
   if(!HasEntries(destination)) {
-    NS_LOG_UNCOND("Has no entries yet for the destination");
     return;
   }
 
@@ -155,25 +154,9 @@ PurgeQueue(ReactiveQueue rQueue, Ipv4Address dest) {
   if(!rQueue.HasEntries(dest)) {
     return;
   }
-  NS_ASSERT(rQueue.GetPendingQueue(dest) -> size() < 10);
+  NS_ASSERT(rQueue.GetPendingQueue(dest) -> size() < 20);
   NS_LOG_UNCOND("Has entries for destination ~~~~ " <<  rQueue.GetPendingQueue(dest) -> size() << " entries total");
-
-  // purge all the entries that have expired in the meantime, stop if the
-  // head of the queue is fresh or there are no more entries in the queue
-  // auto pendingQueue = rQueue.GetPendingQueue(dest);
-  // auto submissionTime = pendingQueue -> front() ->GetSubmissionTime();
-  // Time passedTime = Simulator::Now() - submissionTime;
   NS_LOG_UNCOND("Current time: " << Simulator::Now().GetSeconds());
-
-  // if(passedTime >= ReactiveQueue::TimeoutInterval()) {
-  //   do {
-  //     pendingQueue -> pop_front();
-  //     submissionTime = pendingQueue -> front() ->GetSubmissionTime();
-  //     passedTime = Simulator::Now() - submissionTime;
-  //     NS_LOG_UNCOND("purged entry");
-  //   } while(rQueue.HasEntries(dest) && passedTime >= ReactiveQueue::TimeoutInterval());
-  // }
-  // head of the queue is fresh or there are no more entries in the queue
 
   auto passedTime = [] (auto pQueue) -> Time {
     Time submissionTime = pQueue -> front() -> GetSubmissionTime();

@@ -38,6 +38,9 @@ private:
   // construct packet for the next hop
   Ptr<Packet> NextHopPacket(AnthocnetRouting router);
 
+  // registers a backward ant from a given node as a hello packet
+  void HandleNeighborship(AnthocnetRouting router);
+
   // handle the case where the backward ant is at the target
   // of the forward ant
   void HandleAtDestination(AnthocnetRouting router);

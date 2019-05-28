@@ -71,7 +71,7 @@ AntNetDevice::AntNetDeviceImpl::AntNetDeviceImpl()
 // of the constructor of the AntNetDevice since the latter is a reference type
 // and the 'underlying' device must only be hooked up once
 AntNetDevice::AntNetDeviceImpl::AntNetDeviceImpl(Ptr<NetDevice> device)
-  : m_device(device), m_stdQueue(SendQueue()), m_fastQueue(SendQueue()), m_maxQueueSize(DEFAULT_MAX_QUEUESIZE), m_tracesHooked(false) {
+  : m_device(device), m_stdQueue(SendQueue()), m_fastQueue(SendQueue()), m_sendTimeEst(MilliSeconds(3)), m_maxQueueSize(DEFAULT_MAX_QUEUESIZE), m_tracesHooked(false) {
     HookupTraces(device);
   }
 

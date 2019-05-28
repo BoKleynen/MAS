@@ -20,6 +20,7 @@ NS_LOG_COMPONENT_DEFINE ("AnthocnetRoutingProtocol");
 namespace ant_routing {
 
 Time AnthocnetRouting::s_helloInterval = MilliSeconds(3000);
+double AnthocnetRouting::s_proactiveProbability = 0.10;
 
 struct AnthocnetRouting::AnthocnetImpl {
 
@@ -143,7 +144,7 @@ AnthocnetRouting::GetUnicastSocket() {
 
 // we route all the output back to the device such that it becomes
 // ingress traffic and be queued.
-Ptr<Ipv4Route> AnthocnetRouting::RouteOutput (Ptr<Packet> p,
+Ptr<Ipv4Route> AnthocnetRouting::RouteOutput (Ptr<Packet> packet,
                           const Ipv4Header &header, Ptr<NetDevice> oif,
                           Socket::SocketErrno &sockerr)  {
   NS_ASSERT(m_impl -> m_loopback != 0);
@@ -153,6 +154,10 @@ Ptr<Ipv4Route> AnthocnetRouting::RouteOutput (Ptr<Packet> p,
   route->SetSource(sourceAddr);
   route->SetGateway(Ipv4Address(localhost));
   route->SetOutputDevice(m_impl -> m_loopback);
+
+  if(!IsUdpForAnthocnet(packet, header)) {
+    MaybeSendProactiveAnt(packet, header);
+  }
 
   //NS_LOG_UNCOND("routing output packet: " << p);
 
@@ -170,11 +175,6 @@ AnthocnetRouting::RouteInput  (Ptr<const Packet> packet,
 
   NS_LOG_UNCOND("router " << GetAddress() << "@" << Simulator::Now().GetSeconds()<< " s : routing input: from " << header.GetSource() << " to: " << header.GetDestination());
 
-  // auto source = header.GetSource();
-  // auto dest   = header.GetDestination();
-
-  // NS_LOG_UNCOND("ipv4 header: " << header);
-  // NS_LOG_UNCOND("Broadcast allowed" << m_impl -> m_broadcastSocket -> GetAllowBroadcast ());
 
   uint32_t ingressInterfaceIndex = GetInterfaceIndexForDevice(ingressDevice);
 
@@ -243,8 +243,7 @@ AnthocnetRouting::HandleIngressForward(Ptr<const Packet> packet,
                             UnicastForwardCallback ufcb, ErrorCallback ecb) {
   auto optNeighbor = GetRoutingTable().RoutePacket(header);
   NS_LOG_UNCOND("router " << GetAddress() << "@" << Simulator::Now().GetSeconds()<< " s : routing input: from " << header.GetSource() << " to: " << header.GetDestination() << " - Ingress");
-  NS_LOG_UNCOND("has routing table entry for " << header.GetDestination() << ": " << GetRoutingTable().HasPheromoneEntryFor(header.GetDestination()));
-
+  NS_LOG_UNCOND("has pheromone entry for " << header.GetDestination() << ": " << GetRoutingTable().HasPheromoneEntryFor(header.GetDestination()));
 
   if(optNeighbor.IsValid()) {
 
@@ -263,22 +262,37 @@ AnthocnetRouting::HandleIngressForward(Ptr<const Packet> packet,
     return true;
   }
 
-  if(GetRoutingTable().HasNeighbors()) {
-    NS_LOG_UNCOND("Setting up reactive ants");
-    auto neighbors = GetRoutingTable().Neighbors();
-    for(auto neighborIt = neighbors.begin(); neighborIt != neighbors.end(); neighborIt ++) {
-      NS_LOG_UNCOND("neighbor of " << GetAddress() << ": " << neighborIt -> Address());
-    }
-    // enqueue the packets for reactive ants!
-    GetReactiveQueue().Submit(MakeReactiveQueueEntry(packet, header, ingressInterfaceIndex, ufcb, ecb), *this);
-  } else {
-    ecb(packet, header, Socket::SocketErrno::ERROR_NOROUTETOHOST);
-  }
+  // if(GetRoutingTable().HasNeighbors()) {
+  NS_LOG_UNCOND("Setting up reactive ants");
+  // enqueue the packets for reactive ants!
+  GetReactiveQueue().Submit(MakeReactiveQueueEntry(packet, header, ingressInterfaceIndex, ufcb, ecb), *this);
+  // } else {
+  //   ecb(packet, header, Socket::SocketErrno::ERROR_NOROUTETOHOST);
+  // }
   return true;
 }
 
 bool
 AnthocnetRouting::IsBroadCastForAnthocnet(Ptr<const Packet> packet, const Ipv4Header& header) {
+  if(!(header.GetSource().IsBroadcast() || header.GetSource() == GetInterfaceAddress().GetBroadcast())) {
+    return false;
+  }
+
+  return IsUdpForAnthocnet(packet, header);
+}
+
+bool
+AnthocnetRouting::IsUnicastForAnthocnet(Ptr<const Packet> packet, const Ipv4Header& header) {
+  if(header.GetSource().IsBroadcast() || header.GetSource() == GetInterfaceAddress().GetBroadcast()) {
+    return false;
+  }
+
+  return IsUdpForAnthocnet(packet, header);
+}
+
+
+bool
+AnthocnetRouting::IsUdpForAnthocnet(Ptr<const Packet> packet, const Ipv4Header& header) {
   if(header.GetProtocol() != UdpL4Protocol::PROT_NUMBER) {
     return false;
   }
@@ -286,6 +300,18 @@ AnthocnetRouting::IsBroadCastForAnthocnet(Ptr<const Packet> packet, const Ipv4He
   UdpHeader udpHeader;
   packet->PeekHeader(udpHeader);
   return udpHeader.GetDestinationPort() == ANTHOCNET_PORT;
+}
+
+void
+AnthocnetRouting::MaybeSendProactiveAnt(Ptr<const Packet> packet, const Ipv4Header& header) {
+  double r;
+  if((r = GetRand()) < GetProactiveProbability()) {
+    NS_LOG_UNCOND(GetAddress() << "@" << Simulator::Now() << "- sent out proactive ant from: " << GetAddress()<< "to: " << header.GetDestination());
+    ProactiveAnt ant(GetAddress(), header.GetDestination());
+    ant.Visit(*this);
+  }
+
+  NS_LOG_UNCOND(GetAddress() << "@" << Simulator::Now() << " - MaybeSendProactiveAnt: " << r);
 }
 
 uint32_t
@@ -449,6 +475,20 @@ AnthocnetRouting::SetHelloTimerInterval(Time interval) {
 Time
 AnthocnetRouting::GetHelloTimerInterval() {
   return s_helloInterval;
+}
+
+void
+AnthocnetRouting::SetProactiveProbability(double probability) {
+  if(probability > 1.0 || probability < 0.0 ) {
+    return;
+  }
+
+  s_proactiveProbability = probability;
+}
+
+double
+AnthocnetRouting::GetProactiveProbability() {
+  return s_proactiveProbability;
 }
 
 Ipv4Address

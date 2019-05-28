@@ -4,6 +4,7 @@
 #include "ant-netdevice.h"
 #include "ant-hill.h"
 #include "backward-ant.h"
+#include "neighbor-manager.h"
 
 namespace ns3 {
 
@@ -12,7 +13,7 @@ NS_LOG_COMPONENT_DEFINE("ReactiveAnt");
 namespace ant_routing {
 
 ReactiveAnt::ReactiveAnt(Ipv4Address source, Ipv4Address destination, uint32_t generation)
-  : m_header(AntHeader()){
+  : ForwardAnt(AntHeader()){
   m_header.SetSource(source);
   m_header.SetDestination(destination);
   m_header.SetGeneration(generation);
@@ -21,7 +22,7 @@ ReactiveAnt::ReactiveAnt(Ipv4Address source, Ipv4Address destination, uint32_t g
 }
 
 ReactiveAnt::ReactiveAnt(Ptr<Packet> packet)
-  : m_header(AntHeader()){
+  : ForwardAnt(AntHeader()){
 
   packet -> RemoveHeader(m_header);
   NS_LOG_UNCOND("received reactive ant");
@@ -29,6 +30,12 @@ ReactiveAnt::ReactiveAnt(Ptr<Packet> packet)
 
 void ReactiveAnt::Visit(AnthocnetRouting router){
   NS_LOG_UNCOND("visiting node with forward ant");
+
+  if(DetectLoop(router.GetAddress())) {
+    return;
+  }
+
+  HandleNeighborship(router);
 
   if(HandleAtDestination(router)){
     return;
@@ -45,19 +52,31 @@ void ReactiveAnt::Visit(AnthocnetRouting router){
   // error
 }
 
-bool
-ReactiveAnt::HandleAtDestination(AnthocnetRouting router) {
-  // only continue if we're at the destination
-  if(GetHeader().GetDestination() != router.GetAddress()) {
-    return false;
+void
+ReactiveAnt::HandleNeighborship(AnthocnetRouting router) {
+  // we do not want to add ourselves as a neighbor
+  if(m_header.GetSource() == router.GetAddress()) {
+    return;
   }
-  m_header.AddVisitedNode(router.GetAddress());
-
-  auto bwAnt = router.GetAntHill().Get<BackwardQueen>()->CreateFromForwardAnt(GetHeader());
-  bwAnt -> Visit(router);
-
-  return true;
+  // notify the neighbor manager that we received another (non hello) message
+  // from a device
+  NS_LOG_UNCOND(router.GetAddress() << "@" << Simulator::Now().GetSeconds()  << "- update hello data for: " << m_header.m_visitedNodes.back());
+  router.GetNeighborManager().OtherMessageReceived(m_header.m_visitedNodes.back(), router.GetInterfaceAddress());
 }
+
+// bool
+// ReactiveAnt::HandleAtDestination(AnthocnetRouting router) {
+//   // only continue if we're at the destination
+//   if(GetHeader().GetDestination() != router.GetAddress()) {
+//     return false;
+//   }
+//   m_header.AddVisitedNode(router.GetAddress());
+//
+//   auto bwAnt = router.GetAntHill().Get<BackwardQueen>()->CreateFromForwardAnt(GetHeader());
+//   bwAnt -> Visit(router);
+//
+//   return true;
+// }
 
 bool
 ReactiveAnt::HandleBroadcast(AnthocnetRouting router){
@@ -67,45 +86,43 @@ ReactiveAnt::HandleBroadcast(AnthocnetRouting router){
   }
 
   auto packet = NextHopPacket(router);
-
   BroadcastPacket(packet, router);
-
   return true;
 }
-
-bool
-ReactiveAnt::HandleUnicast(AnthocnetRouting router) {
-  auto routingTable = router.GetRoutingTable();
-  if(!routingTable.HasPheromoneEntryFor(GetHeader().GetDestination())) {
-    return false;
-  }
-
-  auto optNeighbor = routingTable.RouteAnt(GetHeader());
-  if(!optNeighbor.IsValid()) {
-    return false;
-  }
-  auto neighbor = optNeighbor.Get();
-
-  auto packet = NextHopPacket(router);
-
-  UnicastPacket(packet, router, neighbor);
-  return true;
-}
-
-
-Ptr<Packet>
-ReactiveAnt::NextHopPacket(AnthocnetRouting router) {
-  AntHeader antHeader = GetHeader();
-  antHeader.AddVisitedNode(router.GetAddress());
-  antHeader.m_hopCount++;
-  auto device = router.GetDevice();
-  antHeader.m_timeEstimate = (device.QueueSize() + 1)*device.SendingTimeEst();
-  auto packet = Create<Packet>();
-  packet -> AddHeader(antHeader);
-  packet -> AddHeader(AntTypeHeader(species));
-
-  return packet;
-}
+//
+// bool
+// ReactiveAnt::HandleUnicast(AnthocnetRouting router) {
+//   auto routingTable = router.GetRoutingTable();
+//   if(!routingTable.HasPheromoneEntryFor(GetHeader().GetDestination())) {
+//     return false;
+//   }
+//
+//   auto optNeighbor = routingTable.RouteAnt(GetHeader());
+//   if(!optNeighbor.IsValid()) {
+//     return false;
+//   }
+//   auto neighbor = optNeighbor.Get();
+//
+//   auto packet = NextHopPacket(router);
+//
+//   UnicastPacket(packet, router, neighbor);
+//   return true;
+// }
+//
+//
+// Ptr<Packet>
+// ReactiveAnt::NextHopPacket(AnthocnetRouting router) {
+//   AntHeader antHeader = GetHeader();
+//   antHeader.AddVisitedNode(router.GetAddress());
+//   antHeader.m_hopCount++;
+//   auto device = router.GetDevice();
+//   antHeader.m_timeEstimate = (device.QueueSize() + 1)*device.SendingTimeEst();
+//   auto packet = Create<Packet>();
+//   packet -> AddHeader(antHeader);
+//   packet -> AddHeader(AntTypeHeader(species));
+//
+//   return packet;
+// }
 
 Ptr<Packet>
 ReactiveAnt::ToPacket() {
@@ -162,8 +179,8 @@ AntQueenImpl<ReactiveAnt>::GetAntType() {
 bool
 AntQueenImpl<ReactiveAnt>::GenerationInfo::CanBeAdmitted(const AntHeader& header) {
   NS_LOG_UNCOND("Origin of the ant: " << header.GetSource());
-  NS_LOG_UNCOND("Generation of ant: " << header.GetGeneration() << "Current highest: " << m_generation);
-  NS_LOG_UNCOND("Time of ant: " << header.GetTimeEstimate() <<"best time: " << m_bestTime);
+  NS_LOG_UNCOND("Generation of ant: " << header.GetGeneration() << " Current highest: " << m_generation);
+  NS_LOG_UNCOND("Time of ant: " << header.GetTimeEstimate() <<" best time: " << m_bestTime);
   NS_LOG_UNCOND("Hop count ant: "<< (uint32_t)header.GetHopCount()<< "best count: " << static_cast<uint32_t>(m_bestHopCount));
 
   if(header.GetGeneration() < m_generation) {
@@ -199,6 +216,7 @@ AntQueenImpl<ReactiveAnt>::GenerationInfo::UpdateGenerationData(const AntHeader&
 bool
 AntQueenImpl<ReactiveAnt>::GenerationInfo::IsBetterAnt(const AntHeader& header) {
   if(header.GetGeneration() > m_generation) {
+    NS_LOG_UNCOND("Better ant found by generation for" << header.GetSource() <<" - old gen: " << m_generation << "new gen: " << header.GetGeneration());
     return true;
   }
 
@@ -270,6 +288,7 @@ std::shared_ptr<Ant> AntQueenImpl<ReactiveAnt>::CreateFrom(const AntTypeHeader& 
     return info->CreateFrom(typeHeader, packet);
   }else { // if no entry for a given sourceL create one
     auto info = std::make_shared<GenerationInfo>(header);
+    NS_LOG_UNCOND("Created new geninfo with: best time" << info -> m_bestTime << " and generation: " << info -> m_generation);
     m_impl -> m_generationInfo[header.GetSource()] = info;
     return std::make_shared<ReactiveAnt>(packet);
   }

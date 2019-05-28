@@ -1,6 +1,6 @@
 #ifndef REACTIVE_ANT_H
 #define REACTIVE_ANT_H
-#include "ant.h"
+#include "forward-ant.h"
 
 namespace ns3 {
 namespace ant_routing {
@@ -8,7 +8,7 @@ namespace ant_routing {
 class AntRoutingTable;
 class Neighbor;
 
-class ReactiveAnt : public Ant {
+class ReactiveAnt : public ForwardAnt {
 public:
   ReactiveAnt() = default;
   ReactiveAnt(Ipv4Address source, Ipv4Address destination, uint32_t generation);
@@ -17,20 +17,26 @@ public:
 
   virtual void Visit(AnthocnetRouting router) override;
   virtual Ptr<Packet> ToPacket() override;
+  virtual AntType GetSpecies() override {
+    return species;
+  }
 
   static constexpr AntType species = AntType::ReactiveForwardAnt;
 private:
 
   const AntHeader& GetHeader();
 
-  bool HandleAtDestination(AnthocnetRouting router);
+  // update neighborship tables, reactive ants can also function as hello
+  // messages
+  void HandleNeighborship(AnthocnetRouting router);
+  // bool HandleAtDestination(AnthocnetRouting router);
   bool HandleBroadcast(AnthocnetRouting router);
-  bool HandleUnicast(AnthocnetRouting router);
+  // bool HandleUnicast(AnthocnetRouting router);
 
   // create a packet for the next hop
-  Ptr<Packet> NextHopPacket(AnthocnetRouting router);
+  // Ptr<Packet> NextHopPacket(AnthocnetRouting router);
 
-  AntHeader m_header;
+  // AntHeader m_header;
 };
 
 template<>

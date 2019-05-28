@@ -66,6 +66,7 @@ public:
   void FailureDetector(std::shared_ptr<NeighborFailureDetector> detector);
 
 private:
+  Neighbor(std::shard_ptr<NeighborImpl> impl);
   struct NeighborImpl;
 
   const std::shared_ptr<NeighborImpl> Data() const;

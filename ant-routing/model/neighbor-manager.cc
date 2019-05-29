@@ -120,15 +120,37 @@ NeighborManager::HandleNeighborFailure(const Neighbor& neighbor) {
   auto alternatives = m_impl -> m_routingTable.BestAlternativesFor(neighbor);
   m_impl -> m_routingTable.RemoveNeighbor(neighbor);
 
-  std::vector<LinkFailureNotification::Message> messages;
 
-  for(auto altIt = alternatives.begin(); altIt != alternatives.end(); altIt++) {
-    LinkFailureNotification::Message message;
-    message.dest = altIt -> m_destination;
-    message.bestTimeEstimate = altIt -> m_pheromone.TimeEstimate();
-    message.bestHopEstimate = altIt -> m_pheromone.HopCount();
-    messages.push_back(message);
+  if(alternatives.size() != 0) {
+    NS_LOG_UNCOND("failre notificaiton called:");
+
   }
+  NS_LOG_UNCOND("Updating entries: ");
+  for(auto iter = alternatives.begin(); iter != alternatives.end(); iter ++) {
+    NS_LOG_UNCOND(*iter);
+  }
+
+  std::vector<LinkFailureNotification::Message> messages = ConvertAlternatives(alternatives);
+  // for(auto altIt = alternatives.begin(); altIt != alternatives.end(); altIt++) {
+  //
+  //   LinkFailureNotification::Message message;
+  //   message.dest = altIt -> m_destination;
+  //
+  //   if(altIt -> m_vallid) {
+  //     NS_LOG_UNCOND("Alternative found for destination: " << altIt->second);
+  //     message.bestTimeEstimate = altIt ->m_pheromone.TimeEstimate();
+  //     message.bestHopEstimate = altIt ->m_pheromone.HopCount();
+  //   }else{
+  //     NS_LOG_UNCOND("No alternative found for destination" << altIt)
+  //   }
+  //   message.SetValidEstimates(altIt -> m_valid);
+  //   messages.push_back(message);
+  // }
+
+  if(messages.empty()) {
+    return; // do nothing if no interesting events
+  }
+
 
   m_impl -> m_failureCallback(messages);
 }

@@ -29,7 +29,7 @@ using ErrorCallback   = Ipv4RoutingProtocol::ErrorCallback;
 class ReactiveQueue {
 public:
 
-  friend void PurgeQueue(ReactiveQueue rQueue, Ipv4Address dest);
+  friend void CheckOnReactiveQueue(ReactiveQueue rQueue, Ipv4Address dest);
 
   struct ReactiveQueueEntry;
 
@@ -47,9 +47,11 @@ public:
 
 private:
   struct ReactiveQueueImpl;
+  struct DestinationQueue;
 
-  using PendingQueue = std::list<std::shared_ptr<ReactiveQueueEntry>>;
-  using QueueMapType = std::map<Ipv4Address, std::shared_ptr<PendingQueue>>;
+  using QueueMapType = std::map<Ipv4Address, std::shared_ptr<DestinationQueue>>;
+  // using PendingQueue = std::list<std::shared_ptr<ReactiveQueueEntry>>;
+  // using QueueMapType = std::map<Ipv4Address, std::shared_ptr<PendingQueue>>;
 
   // checks if there are any entries for the given destination address
   // returns true both in case the there is no queue for the address
@@ -59,10 +61,14 @@ private:
   // checks if there is a queue associated with the given destination
   bool HasQueue(Ipv4Address dest);
 
+  // // checks if the queue for the given destination has an event planned
+  // bool HasEvent(Ipv4Address dest);
+
   // getter for the queue associated with the pending queue
   // in case there is no queue for the destination returns nullptr
   // in all other cases returns the value set for the pending queue
-  std::shared_ptr<PendingQueue> GetPendingQueue(Ipv4Address dest);
+  // std::shared_ptr<PendingQueue> GetPendingQueue(Ipv4Address dest);
+  std::shared_ptr<DestinationQueue> GetDestinationQueue(Ipv4Address dest);
 
   // how long the entry may be in the queue before it is discarded;
   static Time s_timeoutInterval;

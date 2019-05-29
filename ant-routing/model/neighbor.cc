@@ -24,6 +24,11 @@ Neighbor::NeighborImpl::NeighborImpl(Ipv4Address addr, AntNetDevice device)
 
 Neighbor::Neighbor() : Neighbor(Ipv4Address(), AntNetDevice() ) { }
 
+Neighbor::Neighbor(std::shared_ptr<NeighborImpl> impl)
+  :m_impl(impl) {
+
+  }
+
 Neighbor::Neighbor(Ipv4Address addr, AntNetDevice device) : m_impl(std::make_shared<NeighborImpl>(addr, device)) { }
 
 Neighbor::~Neighbor() { }
@@ -129,7 +134,7 @@ std::ostream& operator<<(std::ostream& os, const Neighbor& nb) {
 const Time NeighborFailureDetector::s_defaultCheckInterval = MilliSeconds(1000);
 
 NeighborFailureDetector::NeighborFailureDetector(Neighbor neighbor)
-  : m_neighbor(neighbor), m_failureCallbacks(std::vector<FailureCallback>()),
+  : m_neighborImplPtr(neighbor.Data()), m_failureCallbacks(std::vector<FailureCallback>()),
     m_checkInterval(s_defaultCheckInterval), m_suspended(false) {
 }
 
@@ -146,10 +151,10 @@ NeighborFailureDetector::ClearAllCallbacks() {
 }
 
 void
-NeighborFailureDetector::Start() {
-  OnStart();
+Start(std::shared_ptr<NeighborFailureDetector> detector) {
+  detector->OnStart();
   // call the checkup procedure for the first time
-  Checkup();
+  Checkup(detector);
 }
 
 void
@@ -197,25 +202,33 @@ NeighborFailureDetector::CheckInterval(Time checkInterval) {
 void
 NeighborFailureDetector::ExecuteCallbacks() {
   NS_LOG_UNCOND("Callback done ----------------------------------------------");
+
+  if(m_neighborImplPtr.expired()) {
+    // no callbacks to be done, neighbor is destroyed
+    return;
+  }
+
+  Neighbor neighbor(m_neighborImplPtr.lock());
+
   for(auto callbackIt = m_failureCallbacks.begin(); callbackIt != m_failureCallbacks.end(); callbackIt++ ){
-    (*callbackIt)(m_neighbor);
+    (*callbackIt)(neighbor);
   }
 }
 
 void
-NeighborFailureDetector::Checkup() {
+Checkup(std::shared_ptr<NeighborFailureDetector> detector) {
   // may be that a new checkup was scheduled during the deactivation of the
   // scanner, we do not want to invoke redundant callbacks
-  if(IsSuspended()) {
+  if(detector -> IsSuspended()) {
     return;
   }
 
-  if(HasFailed()) {
-    ExecuteCallbacks();
+  if(detector -> HasFailed()) {
+    detector -> ExecuteCallbacks();
   }
 
   // schedule the next checkup
-  Simulator::Schedule(m_checkInterval, &NeighborFailureDetector::Checkup, this);
+  Simulator::Schedule(detector -> m_checkInterval, &Checkup, detector);
 }
 
 // SimpleFailureDetector -------------------------------------------------------
@@ -239,7 +252,7 @@ SimpleFailureDetector::HelloReceived(const HelloHeader& header) {
 
 bool
 SimpleFailureDetector::HasFailed() {
-  NS_LOG_UNCOND("has failed call: " << (Simulator::Now() - m_latestHello).GetSeconds() << ", max missed: " << (m_maxMissed * m_helloInterval).GetSeconds());
+  // NS_LOG_UNCOND("has failed call: " << (Simulator::Now() - m_latestHello).GetSeconds() << ", max missed: " << (m_maxMissed * m_helloInterval).GetSeconds());
   return Simulator::Now() - m_latestHello > m_maxMissed * m_helloInterval;
 }
 

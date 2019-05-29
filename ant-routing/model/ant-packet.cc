@@ -290,12 +290,12 @@ void HelloHeader::SetSource(Ipv4Address source) {
 // LinkFailureNotification Definition ------------------------------------------
 
 LinkFailureNotification::LinkFailureNotification ()
-  : m_source(Ipv4Address()), m_messages (std::vector<Message> ())
+  : m_source(Ipv4Address()), m_visitedNodes(std::vector<Ipv4Address>()), m_messages (std::vector<Message> ())
 {
 }
 
-LinkFailureNotification::LinkFailureNotification (Ipv4Address source, std::vector<Message> messages)
-  : m_source(source), m_messages (messages)
+LinkFailureNotification::LinkFailureNotification (Ipv4Address source, std::vector<Ipv4Address> visited, std::vector<Message> messages)
+  : m_source(source), m_visitedNodes(visited), m_messages (messages)
 {
 }
 
@@ -318,16 +318,23 @@ LinkFailureNotification::GetInstanceTypeId () const
 uint32_t
 LinkFailureNotification::GetSerializedSize () const
 {
-  return IPV4_ADDRESS_SIZE + m_messages.size() * 13;
+  // Source, size, lost routes
+  return IPV4_ADDRESS_SIZE + 2*sizeof(uint8_t) + m_visitedNodes.size() * IPV4_ADDRESS_SIZE + m_messages.size() * Message::GetSerializedSize();
 }
 
 void
 LinkFailureNotification::Serialize (Buffer::Iterator i) const
 {
   WriteTo(i, m_source);
-  i.WriteU8 (m_messages.size());
+  i.WriteU8((uint8_t)(m_visitedNodes.size()));
+  for(auto iter = m_visitedNodes.begin(); iter != m_visitedNodes.end(); iter ++) {
+    WriteTo(i, *iter);
+  }
+  i.WriteU8 ((uint8_t)(m_messages.size()));
+  NS_LOG_UNCOND("messages to be seriallised: " << m_messages.size());
   for (auto iter = m_messages.begin (); iter != m_messages.end (); iter++)
   {
+    NS_LOG_UNCOND("Serialized message");
     iter->Serialize (i);
   }
 }
@@ -338,8 +345,18 @@ LinkFailureNotification::Deserialize (Buffer::Iterator start)
   auto i = start;
 
   ReadFrom(i, m_source);
+  auto n_nodes = i.ReadU8 ();
+  Ipv4Address addr;
+
+  for(int n = 0; n != n_nodes; n++) {
+    ReadFrom(i, addr);
+    m_visitedNodes.push_back(addr);
+  }
+
   auto n_messages = i.ReadU8 ();
-  for (int n = 1; n < n_messages; n++) {
+  NS_LOG_UNCOND("messages to deserialize: " << n_messages);
+  for (int n = 0; n != n_messages; n++) {
+    NS_LOG_UNCOND("Deserialized message");
     auto message = Message ();
     message.Deserialize (i);
     m_messages.push_back(message);
@@ -376,15 +393,16 @@ void LinkFailureNotification::SetMessages(std::vector<Message> messages) {
 uint32_t
 LinkFailureNotification::Message::GetSerializedSize ()
 {
-  return IPV4_ADDRESS_SIZE + sizeof(uint64_t) + sizeof(uint8_t);
+  return IPV4_ADDRESS_SIZE + sizeof(uint64_t) + sizeof(uint8_t)*2;
 }
 
 void
 LinkFailureNotification::Message::Serialize (Buffer::Iterator i) const
 {
   WriteTo (i, dest);
-  auto nanoTime = bestTimeEstimate.GetNanoSeconds ();
-  i.Write ((const uint8_t *) &(nanoTime), sizeof(uint64_t));
+//  auto nanoTime = bestTimeEstimate.GetNanoSeconds ();
+  //i.Write ((const uint8_t *) &(nanoTime), sizeof(uint64_t));
+  i.WriteHtonU64(bestTimeEstimate.GetInteger());
   i.WriteU8 (bestHopEstimate);
 }
 
@@ -394,20 +412,31 @@ LinkFailureNotification::Message::Deserialize (Buffer::Iterator start)
   auto i = start;
   ReadFrom (i, dest);
   int64_t rcvdTime;
-  i.Read ((uint8_t *)&rcvdTime, 8);
-  bestTimeEstimate = NanoSeconds (rcvdTime);
+  // i.Read ((uint8_t *)&rcvdTime, 8);
+  // m_timeEstimate = NanoSeconds (rcvdTime);
+  rcvdTime = i.ReadNtohU64();
+  bestTimeEstimate = Time::From(rcvdTime);
+  // bestTimeEstimate = NanoSeconds (rcvdTime);
   bestHopEstimate = i.ReadU8 ();
 
   uint32_t dist = i.GetDistanceFrom (start);
   return dist;
 }
 
+bool
+LinkFailureNotification::Message::HasValidEstimates() {
+  return flags != 0;
+}
+void
+LinkFailureNotification::Message::SetValidEstimates(bool val) {
+  flags = val ? 1 : 0;
+}
 
 std::ostream& operator <<(std::ostream& os, const LinkFailureNotification::Message& message) {
 return os << "Message { "
-          << message.dest
-          << message.bestTimeEstimate
-          << message.bestHopEstimate
+          << "Destination: " << message.dest
+          << "best time estimate: " << message.bestTimeEstimate
+          << "best hop estimate: " << (uint32_t)(message.bestHopEstimate)
           << " }";
 }
 

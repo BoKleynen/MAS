@@ -44,12 +44,14 @@ std::ostream& operator<<(std::ostream& os, const PheromoneEntry& pe);
 // and the pheromone value
 struct AlternativeRoute {
   AlternativeRoute();
-  AlternativeRoute(Ipv4Address dest, Neighbor neighbor, PheromoneEntry pheromone);
+  AlternativeRoute(Ipv4Address dest, Neighbor neighbor, PheromoneEntry pheromone, bool valid);
   Ipv4Address m_destination;
   Neighbor m_neighbor;
   PheromoneEntry m_pheromone;
+  bool m_valid;
 };
 
+std::ostream& operator<<(std::ostream& os, const AlternativeRoute& ar);
 // immutable proxy for a given Neighbor
 struct NeighborKey {
 public:
@@ -145,6 +147,8 @@ public:
   // checks if the provided neigbor has an entry in its pheromone table for the
   // given destination.
   bool HasPheromoneEntryFor(Ipv4Address neighbor, Ipv4Address destination);
+
+  void DeletePheromoneEntryFor(Ipv4Address neighbor, Ipv4Address destination);
   // gets the pheromone entry for the given neighbor and destination address
   const std::shared_ptr<PheromoneEntry> GetPheromone(Ipv4Address neighbor, Ipv4Address destination);
   // setter for pheromone values.
@@ -162,11 +166,22 @@ public:
   // the given neighbor was the best route
   std::vector<AlternativeRoute> BestAlternativesFor(const Neighbor& neighbor);
 
+  // returns an alternative route in case the given neighbor was the best
+  // for the given destination. In  there was no alternative, returns false as the second argument.
+  AlternativeRoute GetBestAlternativeFor(const Neighbor& neighbor, Ipv4Address destination);
+  AlternativeRoute GetBestAlternativeFor(Ipv4Address neighborAddr, Ipv4Address destination);
+
+  // returns true iff the given neighbor has the highest pheromone value for the
+  // given destination. Incase it doesnt have an entry, returns false
+  bool IsBestEntryFor(const Neighbor& neighbor, Ipv4Address destination);
+  bool IsBestEntryFor(Ipv4Address neighboAddr, Ipv4Address destination);
+
   // checks if the given address is the address of a neighbor node
   bool IsNeighbor(Neighbor neighbor);
   bool IsNeighbor(Ipv4Address addr);
   // returns a vector containing all the neighbors registered in the
   // routing table.
+
   std::vector<NeighborKey> Neighbors();
 
   // static variables to configure the calulcations on the ant-routing table.
@@ -182,6 +197,9 @@ public:
   static Time   HopTime();
   static void   HopTime(Time hopTime);
 
+  static double BestEstCoeff();
+  static void   BestEstCoeff(double coeff);
+
 private:
 
   // instance variables:
@@ -196,6 +214,7 @@ private:
   static double s_packetBeta; // exploration exponent for the packets
   static double s_gamma; // influence factor for new pheromones
   static Time   s_hopTime; // time to make a hop in the system (estimate)
+  static double s_bestEstCoeff; // coefficient used to update the best hop and time estimate
 
   // auxillary methods
 
@@ -208,15 +227,6 @@ private:
   // such entry, return a nullpointer
   std::shared_ptr<NeighborTable> GetNeighborTable(NeighborKey neighbor);
 
-  // returns true iff the given neighbor has the highest pheromone value for the
-  // given destination. Incase it doesnt have an entry, returns false
-  bool IsBestEntryFor(const Neighbor& neighbor, Ipv4Address destination);
-
-  // returns an alternative route in case the given neighbor was the best
-  // for the given destination. In case the neighbor was not the best entry or there was no alternative,
-  // returns false as the second argument.
-  std::pair<AlternativeRoute, bool> GetBestAlternativeFor(const Neighbor& neighbor, Ipv4Address destination);
-
   // calculates the total pheromone for a destination with a given
   // beta which serves to configure the explorative behavior of the packet.
   double TotalPheromone(Ipv4Address dest, double beta);
@@ -227,6 +237,8 @@ private:
     return randGen -> GetValue(0, 1);
   }
 };
+
+std::vector<LinkFailureNotification::Message> ConvertAlternatives(std::vector<AlternativeRoute> routes);
 
 } // ant_routing
 } // ns3

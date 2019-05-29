@@ -22,6 +22,7 @@ public:
 
   friend bool operator<(const Neighbor& lhs, const Neighbor& rhs);
   friend class AntRoutingTable;
+  friend class NeighborFailureDetector;
   // todo add a default device as a static variable? allows to add based on address only
   Neighbor();
   Neighbor(Ipv4Address addr, AntNetDevice device);
@@ -66,8 +67,9 @@ public:
   void FailureDetector(std::shared_ptr<NeighborFailureDetector> detector);
 
 private:
-  Neighbor(std::shard_ptr<NeighborImpl> impl);
   struct NeighborImpl;
+
+  Neighbor(std::shared_ptr<NeighborImpl> impl);
 
   const std::shared_ptr<NeighborImpl> Data() const;
   std::shared_ptr<NeighborImpl> Data();
@@ -87,6 +89,9 @@ std::ostream& operator<<(std::ostream& os, const Neighbor& nb);
 // detection mechanism of the neighbor.
 class NeighborFailureDetector {
 public:
+  friend void Checkup(std::shared_ptr<NeighborFailureDetector> detector);
+  friend void Start(std::shared_ptr<NeighborFailureDetector> detector);
+
   // typedef of a function type that is called when failure of the neighbor
   // occurs
   using FailureCallback = std::function<void(Neighbor neighbor)>;
@@ -107,10 +112,6 @@ public:
 
   // clears all the registered callbacks;
   void ClearAllCallbacks();
-
-  // to be called after the creation of the application, first calls the OnStart hook
-  // then does other work.
-  void Start();
 
   // suspend the failure checker (do not do regular checkups);
   void Suspend();
@@ -138,11 +139,11 @@ private:
   // calls all the callbacks
   void ExecuteCallbacks();
   // Gets called to perform a check on the activity of the neighbor
-  void Checkup();
+
 
   static const Time s_defaultCheckInterval;
-
-  Neighbor m_neighbor; // the neighbor the failure detector is detector for
+  std::weak_ptr<Neighbor::NeighborImpl> m_neighborImplPtr;
+  //Neighbor m_neighbor; // the neighbor the failure detector is detector for
   std::vector<FailureCallback> m_failureCallbacks; // all the callbacks to be called on failure
   Time m_checkInterval; // interval for checking time
   bool m_suspended;
@@ -151,7 +152,7 @@ private:
 template<typename FailureDetectorType, typename ...Args>
 std::shared_ptr<NeighborFailureDetector> MakeFailureDetector(Args... args) {
   auto detector = std::make_shared<FailureDetectorType>(std::forward<Args>(args)...);
-  detector->Start();
+  Start(detector);
   return detector;
 }
 

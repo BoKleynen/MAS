@@ -6,6 +6,8 @@
 namespace ns3 {
 namespace ant_routing {
 
+class AlternativeRoute;
+
 class LinkFailureAnt : public Ant {
 public:
   LinkFailureAnt(Ptr<Packet> packet);
@@ -16,6 +18,11 @@ public:
   virtual Ptr<Packet> ToPacket() override;
 
   static constexpr AntType species = AntType::LinkFailureAnt;
+private:
+  LinkFailureNotification m_header;
+
+  bool LoopDetection(Ipv4Address addr);
+  void NextHop(AnthocnetRouting router, std::vector<AlternativeRoute> alternatives);
 };
 
 using LinkFailureQueen = AntQueenImpl<LinkFailureAnt>;

@@ -46,16 +46,26 @@ PheromoneEntry::TimeEstimate(Time timeEstimate) {
 
 std::ostream&
 operator<<(std::ostream& os, const PheromoneEntry& pe) {
-  os << "PheromoneEntry { value: " << pe.Value() << "}";
+  os << "PheromoneEntry { value: " << pe.Value() << " timeEstimate: "<< pe.TimeEstimate() << " hopCount "<< (uint32_t)pe.HopCount() <<"}";
   return os;
 }
 
 // AlternativeRoute implementation ---------------------------------------------
 AlternativeRoute::AlternativeRoute()
-  : AlternativeRoute(Ipv4Address(), Neighbor(), PheromoneEntry()) { }
+  : AlternativeRoute(Ipv4Address(), Neighbor(),PheromoneEntry(), false) { }
 
-AlternativeRoute::AlternativeRoute(Ipv4Address dest, Neighbor neighbor, PheromoneEntry pheromone)
-  : m_destination(dest), m_neighbor(neighbor), m_pheromone(pheromone) { }
+AlternativeRoute::AlternativeRoute(Ipv4Address dest, Neighbor neighbor, PheromoneEntry pheromone, bool valid)
+  : m_destination(dest), m_neighbor(neighbor), m_pheromone(pheromone), m_valid(valid) { }
+
+std::ostream& operator<<(std::ostream& os, const AlternativeRoute& ar) {
+  if (ar.m_valid) {
+    os << "Alternative route { dest: "<< ar.m_destination <<", neighbor: " << ar.m_neighbor << ", pheromone: "<< ar.m_pheromone << "}";
+  } else {
+  os << "Alternative route { dest: "<< ar.m_destination << "}";
+  }
+  return os;
+}
+
 // NeighborKey Implementation --------------------------------------------------
 NeighborKey::NeighborKey() : m_addr(Ipv4Address()), m_neighbor (nullptr) { }
 NeighborKey::NeighborKey(Neighbor neighbor) : m_addr(neighbor.Address()), m_neighbor(std::make_shared<Neighbor>(neighbor)) { }
@@ -92,6 +102,7 @@ double AntRoutingTable::s_antBeta = 1.0;
 double AntRoutingTable::s_packetBeta = 1.0;
 double AntRoutingTable::s_gamma = 0.7;
 Time   AntRoutingTable::s_hopTime = MilliSeconds(3);
+double AntRoutingTable::s_bestEstCoeff = 0.5;
 
 // implementation of methods
 AntRoutingTable::AntRoutingTable() : m_table(std::make_shared<RoutingTableType>()) { }
@@ -235,8 +246,10 @@ AntRoutingTable::UpdatePheromoneEntry(Ipv4Address neighbor, Ipv4Address dest, Ti
   std::shared_ptr<PheromoneEntry> pheromoneEntryPtr = neighborTablePtr->operator[](dest);
   double extraPheromone = 2/(timeEstimate.GetSeconds() + hops*HopTime().GetSeconds());
   pheromoneEntryPtr->Value(s_gamma * pheromoneEntryPtr->Value() + (1 - s_gamma)*extraPheromone);
-  pheromoneEntryPtr->HopCount(hops);
-  pheromoneEntryPtr->TimeEstimate(timeEstimate);
+  pheromoneEntryPtr->HopCount(s_bestEstCoeff * pheromoneEntryPtr ->HopCount() + (1-s_bestEstCoeff)*hops);
+  auto timeUpdate = Seconds(s_bestEstCoeff* pheromoneEntryPtr->TimeEstimate().GetSeconds() + (1-s_bestEstCoeff)*timeEstimate.GetSeconds());
+  NS_LOG_UNCOND("Time updated by the backward ant: " << timeUpdate);
+  pheromoneEntryPtr->TimeEstimate(timeUpdate);
 }
 
 bool
@@ -257,6 +270,12 @@ AntRoutingTable::HasPheromoneEntryFor(Ipv4Address destination) {
 bool
 AntRoutingTable::HasPheromoneEntryFor(Ipv4Address source, Ipv4Address destination) {
   return GetPheromone(source, destination) != nullptr;
+}
+
+void
+AntRoutingTable::DeletePheromoneEntryFor(Ipv4Address neighbor, Ipv4Address destination) {
+  auto neighborTable = GetNeighborTable(neighbor);
+  neighborTable -> erase(destination);
 }
 
 const std::shared_ptr<PheromoneEntry>
@@ -342,19 +361,22 @@ AntRoutingTable::BestAlternativesFor(const Neighbor& neighbor) {
 
   auto neighborTable = GetNeighborTable(neighbor);
   for(auto destEntryIt = neighborTable->begin(); destEntryIt != neighborTable->end(); destEntryIt++) {
-    auto alt = GetBestAlternativeFor(neighbor, destEntryIt->first);
 
-    if(alt.second) {
-      alternatives.push_back(alt.first);
+    if (!IsBestEntryFor(neighbor, destEntryIt->first)) {
+      continue;
     }
+
+    auto alt = GetBestAlternativeFor(neighbor, destEntryIt->first);
+    alternatives.push_back(alt);
   }
 
   return alternatives;
 }
 
+
 bool
-AntRoutingTable::IsBestEntryFor(const Neighbor& neighbor, Ipv4Address destination) {
-  auto neighborEntry = GetPheromone(neighbor.Address(), destination);
+AntRoutingTable::IsBestEntryFor(Ipv4Address neighborAddr, Ipv4Address destination) {
+  auto neighborEntry = GetPheromone(neighborAddr, destination);
 
   if(neighborEntry == nullptr) {
     return false;
@@ -365,7 +387,7 @@ AntRoutingTable::IsBestEntryFor(const Neighbor& neighbor, Ipv4Address destinatio
 
   for(auto neighborIt = neighbors.begin(); neighborIt != neighbors.end(); neighborIt++) {
 
-    if(neighborIt -> Get() == neighbor) {
+    if(neighborIt -> Get().Address() == neighborAddr) {
       continue;
     }
 
@@ -377,27 +399,55 @@ AntRoutingTable::IsBestEntryFor(const Neighbor& neighbor, Ipv4Address destinatio
   return true;
 }
 
-std::pair<AlternativeRoute, bool>
-AntRoutingTable::GetBestAlternativeFor(const Neighbor& neighbor, Ipv4Address destination) {
+bool
+AntRoutingTable::IsBestEntryFor(const Neighbor& neighbor, Ipv4Address destination) {
+  return IsBestEntryFor(neighbor.Address(), destination);
+}
+
+AlternativeRoute
+AntRoutingTable::GetBestAlternativeFor(Ipv4Address neighborAddr, Ipv4Address destination) {
   auto neighbors = Neighbors();
 
-  if (!IsBestEntryFor(neighbor, destination)) {
-    return std::make_pair(AlternativeRoute(), false);
-  }
-
   AlternativeRoute bestAlt;
+  bestAlt.m_destination = destination;
 
   for(auto neighborIt =  neighbors.begin(); neighborIt != neighbors.end(); neighborIt++) {
-    if(neighborIt -> Get() == neighbor) {
+    if(neighborIt -> Get().Address() == neighborAddr) {
       continue;
     }
+
     auto entry = GetPheromone(neighborIt->Address(), destination);
     if (entry != nullptr && (entry -> Value()) > bestAlt.m_pheromone.Value()) {
-      bestAlt = AlternativeRoute(destination, *neighborIt, *entry);
+      bestAlt = AlternativeRoute(destination, *neighborIt, *entry, true);
     }
   }
 
-  return std::make_pair(bestAlt, bestAlt.m_pheromone.Value() != 0.0);
+  return bestAlt;
+}
+
+
+std::vector<LinkFailureNotification::Message>
+ConvertAlternatives(std::vector<AlternativeRoute> alternatives) {
+  std::vector<LinkFailureNotification::Message> messages;
+  for(auto altIt = alternatives.begin(); altIt != alternatives.end(); altIt++) {
+
+    LinkFailureNotification::Message message;
+    message.dest = altIt -> m_destination;
+
+    if(altIt -> m_valid) {
+      message.bestTimeEstimate = altIt ->m_pheromone.TimeEstimate();
+      message.bestHopEstimate = altIt ->m_pheromone.HopCount();
+    }
+    message.SetValidEstimates(altIt -> m_valid);
+    messages.push_back(message);
+  }
+  return messages;
+}
+
+
+AlternativeRoute
+AntRoutingTable::GetBestAlternativeFor(const Neighbor& neighbor, Ipv4Address destination) {
+  return GetBestAlternativeFor(neighbor.Address(), destination);
 }
 
 bool AntRoutingTable::IsNeighbor(Ipv4Address addr) {
@@ -462,6 +512,15 @@ AntRoutingTable::HopTime(){
 void
 AntRoutingTable::HopTime(Time hopTime){
   s_hopTime = hopTime;
+}
+
+double
+AntRoutingTable::BestEstCoeff() {
+  return s_bestEstCoeff;
+}
+void
+AntRoutingTable::BestEstCoeff(double coeff) {
+  s_bestEstCoeff = coeff;
 }
 
 

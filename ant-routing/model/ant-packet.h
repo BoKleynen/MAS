@@ -164,14 +164,17 @@ public:
     Ipv4Address dest;
     Time        bestTimeEstimate;
     uint8_t     bestHopEstimate;
+    uint8_t     flags;
 
     static uint32_t GetSerializedSize (void);
     void Serialize (Buffer::Iterator start) const;
     uint32_t Deserialize (Buffer::Iterator start);
+    bool HasValidEstimates();
+    void SetValidEstimates(bool val);
   };
 
   LinkFailureNotification ();
-  LinkFailureNotification (Ipv4Address source, std::vector<Message> messages);
+  LinkFailureNotification (Ipv4Address source, std::vector<Ipv4Address> visited, std::vector<Message> messages);
 
   static TypeId GetTypeId ();
   TypeId GetInstanceTypeId () const;
@@ -181,6 +184,7 @@ public:
   void Print (std::ostream &os) const;
 
   Ipv4Address GetSource() const;
+  std::vector<Ipv4Address> GetNodes();
   std::vector<Message> GetMessages();
 
   void SetSource(Ipv4Address source);
@@ -192,8 +196,9 @@ public:
     return m_messages == rhs.m_messages;
   }
 
-private:
+
   Ipv4Address m_source;
+  std::vector<Ipv4Address> m_visitedNodes;
   std::vector<Message> m_messages;
 }; // LinkFailureNotification
 

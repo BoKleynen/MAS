@@ -311,7 +311,7 @@ AnthocnetRouting::MaybeSendProactiveAnt(Ptr<const Packet> packet, const Ipv4Head
     ant.Visit(*this);
   }
 
-  NS_LOG_UNCOND(GetAddress() << "@" << Simulator::Now() << " - MaybeSendProactiveAnt: " << r);
+  NS_LOG_UNCOND(GetAddress() << "@" << Simulator::Now().GetSeconds() << " - MaybeSendProactiveAnt: " << r);
 }
 
 uint32_t
@@ -394,7 +394,16 @@ void AnthocnetRouting::InstallLinkFailureCallback() {
   Ipv4InterfaceAddress ifAddress = m_impl -> m_ifAddress;
   AntNetDevice device = m_impl -> m_device;
   m_impl -> m_neighborManager.FailureCallback([device, broadcastSocket, ifAddress] (std::vector<LinkFailureNotification::Message> messages) mutable {
-    LinkFailureNotification notification(ifAddress.GetLocal(), messages);
+
+    NS_LOG_UNCOND(ifAddress.GetLocal() << "@" << Simulator::Now().GetSeconds() << " updating entries for link failure");
+
+    if (messages.size() == 0) {
+      NS_LOG_UNCOND("Failure callback, no interesting packets");
+      return; // if no good paths lost, nothing happens
+    }
+
+    std::vector<Ipv4Address> visitedNodes{ifAddress.GetLocal()};
+    LinkFailureNotification notification(ifAddress.GetLocal(), visitedNodes, messages);
     Ptr<Packet> packet = Create<Packet>();
     packet -> AddHeader(notification);
     AntTypeHeader typeHeader(AntType::LinkFailureAnt);

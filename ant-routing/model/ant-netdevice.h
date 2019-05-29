@@ -10,6 +10,10 @@
 namespace ns3 {
 namespace ant_routing {
 
+// callback function, used to notify the interested parties that sending
+// a certain packet has failed at the mac layer
+using RouteRepairCallback = std::function<std::shared_ptr<SendQueueEntry>(Ipv4Address, Ipv4Address)>;
+
 class AntNetDevice {
 public:
   AntNetDevice();
@@ -28,9 +32,11 @@ public:
 
   // moving average of the send time of the node
   Time SendingTimeEst();
+  //
+  static std::size_t MaxQueueSize();
+  static void MaxQueueSize(std::size_t size);
 
-  std::size_t MaxQueueSize();
-  void MaxQueueSize(std::size_t size);
+  void SetRouteRepairCallback(RouteRepairCallback cb);
 
   static double GetAlpha();
   static void SetAlpha(double alpha);
@@ -38,6 +44,7 @@ public:
 private:
   // the alpha value for calculating the average send time
   static double s_alpha;
+  static std::size_t s_maxQueueSize;
 
   static constexpr const char* MacTxDrop = "MacTxDrop";
   static constexpr const char* TxOkHeader = "TxOkHeader";

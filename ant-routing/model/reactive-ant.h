@@ -22,15 +22,15 @@ public:
   }
 
   static constexpr AntType species = AntType::ReactiveForwardAnt;
-private:
+protected:
 
   const AntHeader& GetHeader();
 
   // update neighborship tables, reactive ants can also function as hello
   // messages
-  void HandleNeighborship(AnthocnetRouting router);
+  virtual void HandleNeighborship(AnthocnetRouting router);
   // bool HandleAtDestination(AnthocnetRouting router);
-  bool HandleBroadcast(AnthocnetRouting router);
+  virtual bool HandleBroadcast(AnthocnetRouting router);
   // bool HandleUnicast(AnthocnetRouting router);
 
   // create a packet for the next hop

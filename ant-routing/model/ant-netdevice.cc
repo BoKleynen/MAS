@@ -53,14 +53,19 @@ struct AntNetDevice::AntNetDeviceImpl {
   // the AntNetDeviceImpl is destructed
   void UnhookTraces(Ptr<NetDevice> device);
 
+  // standard lane submission
+  void Submit(std::shared_ptr<SendQueueEntry> entry);
+  // fast lane submission
+  void SubmitExpedited(std::shared_ptr<SendQueueEntry> entry);
+
   // members:
 
   Ptr<NetDevice> m_device;
   SendQueue m_stdQueue;
   SendQueue m_fastQueue;
   Time m_sendTimeEst; // estimate of the time needed to send a message over the channel
-  std::size_t m_maxQueueSize; // the max queue size for each queue before we start dropping packets
   bool m_tracesHooked;
+  RouteRepairCallback m_routeRepairCallback;
 };
 
 AntNetDevice::AntNetDeviceImpl::AntNetDeviceImpl()
@@ -71,7 +76,7 @@ AntNetDevice::AntNetDeviceImpl::AntNetDeviceImpl()
 // of the constructor of the AntNetDevice since the latter is a reference type
 // and the 'underlying' device must only be hooked up once
 AntNetDevice::AntNetDeviceImpl::AntNetDeviceImpl(Ptr<NetDevice> device)
-  : m_device(device), m_stdQueue(SendQueue()), m_fastQueue(SendQueue()), m_sendTimeEst(MilliSeconds(3)), m_maxQueueSize(DEFAULT_MAX_QUEUESIZE), m_tracesHooked(false) {
+  : m_device(device), m_stdQueue(SendQueue()), m_fastQueue(SendQueue()), m_sendTimeEst(MilliSeconds(3)), m_tracesHooked(false) {
     HookupTraces(device);
   }
 
@@ -183,6 +188,19 @@ AntNetDevice::AntNetDeviceImpl::TxOkHeaderCallback(const WifiMacHeader& h) {
 // callback to be called when the transmission failed
 void
 AntNetDevice::AntNetDeviceImpl::DroppedPacketCallback() {
+
+  if(!m_stdQueue.empty() && m_stdQueue.front()->Sending()) {
+    auto frontEntry = std::dynamic_pointer_cast<UnicastQueueEntry>(m_stdQueue.front());
+    if (frontEntry != nullptr) {
+      auto source = frontEntry -> GetRoute() -> GetSource();
+      auto dest = frontEntry -> GetRoute() -> GetDestination();
+      if( m_routeRepairCallback) {
+        auto entry = m_routeRepairCallback(source, dest);
+        SubmitExpedited(entry);
+      }
+    }
+  }
+
   if(!m_fastQueue.empty() && m_fastQueue.front()->Sending()) {
     m_fastQueue.pop();
     SendNext();
@@ -220,6 +238,28 @@ AntNetDevice::AntNetDeviceImpl::DeliveredPacketCallback() {
   //NS_LOG_WARN("Warning: " << m_device -> GetAddress() << "received 'DeliveredPacketCallback' without any sending entries in the standard or fast queue");
 }
 
+void
+AntNetDevice::AntNetDeviceImpl::Submit(std::shared_ptr<SendQueueEntry> entry) {
+  if(m_stdQueue.size() > AntNetDevice::MaxQueueSize()) {
+    return; // drop the packet. TODO do we add a trace source for this?
+  }
+
+  NS_LOG_UNCOND("Submitted normal packet");
+
+  SubmitTo(entry, m_stdQueue);
+}
+
+void
+AntNetDevice::AntNetDeviceImpl::SubmitExpedited(std::shared_ptr<SendQueueEntry> entry) {
+  if(m_fastQueue.size() > AntNetDevice::MaxQueueSize()) {
+    return;
+  }
+
+  NS_LOG_UNCOND("Submitted expedited entry, queue size: " << m_fastQueue.size());
+
+  SubmitTo(entry, m_fastQueue);
+}
+
 // AntNetDevice definition -----------------------------------------------------
 // static constants ------------------------------------------------------------
 // constexpr std::string AntNetDevice::MacTxDrop = "MacTxDrop";
@@ -227,6 +267,8 @@ AntNetDevice::AntNetDeviceImpl::DeliveredPacketCallback() {
 // constexpr std::string AntNetDevice::TxErrHeader = "TxErrHeader";
 // static variable definition --------------------------------------------------
 double AntNetDevice::s_alpha = 0.5;
+
+std::size_t AntNetDevice::s_maxQueueSize = DEFAULT_MAX_QUEUESIZE;
 
 // method definition -----------------------------------------------------------
 AntNetDevice::AntNetDevice() : AntNetDevice(Ptr<NetDevice>()) { }
@@ -252,24 +294,13 @@ AntNetDevice::Device(Ptr<NetDevice> device) {
 
 void
 AntNetDevice::Submit(std::shared_ptr<SendQueueEntry> entry) {
-  if(m_impl -> m_stdQueue.size() > MaxQueueSize()) {
-    return; // drop the packet. TODO do we add a trace source for this?
-  }
-
-  NS_LOG_UNCOND("Submitted normal packet");
-
-  m_impl -> SubmitTo(entry, m_impl -> m_stdQueue);
+  m_impl -> Submit(entry);
 }
+
 
 void
 AntNetDevice::SubmitExpedited(std::shared_ptr<SendQueueEntry> entry) {
-  if(m_impl -> m_fastQueue.size() > MaxQueueSize()) {
-    return;
-  }
-
-  NS_LOG_UNCOND("Submitted expedited entry, queue size: " << m_impl -> m_fastQueue.size());
-
-  m_impl -> SubmitTo(entry, m_impl -> m_fastQueue);
+  m_impl -> SubmitExpedited(entry);
 }
 
 // returns the size of the std queue (not used to expedite ants)
@@ -286,12 +317,17 @@ AntNetDevice::SendingTimeEst() {
 
 std::size_t
 AntNetDevice::MaxQueueSize() {
-  return m_impl -> m_maxQueueSize;
+  return s_maxQueueSize;
 }
 
 void
 AntNetDevice::MaxQueueSize(std::size_t maxQueueSize) {
-  m_impl -> m_maxQueueSize = maxQueueSize;
+  s_maxQueueSize = maxQueueSize;
+}
+
+void
+AntNetDevice::SetRouteRepairCallback(RouteRepairCallback rrcb) {
+  m_impl -> m_routeRepairCallback = rrcb;
 }
 
 double

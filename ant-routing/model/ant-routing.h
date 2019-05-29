@@ -157,6 +157,8 @@ private:
   // used to make the life of the neighbor monitor easier
   void InstallNeighborFactory();
   void InstallLinkFailureCallback();
+  void InstallRouteRepairCallback();
+
 
   // broadcasts the packet to all the neighbor of the node in an expedited way
   void BroadcastExpedited(Ptr<Packet> packet);

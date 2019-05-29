@@ -45,6 +45,7 @@ public:
 
   Ipv4Header GetHeader();
   void SetRoute(Ptr<Ipv4Route> route);
+  Ptr<Ipv4Route> GetRoute();
 
 private:
   // bookkeeping for the router

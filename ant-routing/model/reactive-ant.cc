@@ -25,7 +25,6 @@ ReactiveAnt::ReactiveAnt(Ptr<Packet> packet)
   : ForwardAnt(AntHeader()){
 
   packet -> RemoveHeader(m_header);
-  NS_LOG_UNCOND("received reactive ant");
 }
 
 void ReactiveAnt::Visit(AnthocnetRouting router){
@@ -89,40 +88,7 @@ ReactiveAnt::HandleBroadcast(AnthocnetRouting router){
   BroadcastPacket(packet, router);
   return true;
 }
-//
-// bool
-// ReactiveAnt::HandleUnicast(AnthocnetRouting router) {
-//   auto routingTable = router.GetRoutingTable();
-//   if(!routingTable.HasPheromoneEntryFor(GetHeader().GetDestination())) {
-//     return false;
-//   }
-//
-//   auto optNeighbor = routingTable.RouteAnt(GetHeader());
-//   if(!optNeighbor.IsValid()) {
-//     return false;
-//   }
-//   auto neighbor = optNeighbor.Get();
-//
-//   auto packet = NextHopPacket(router);
-//
-//   UnicastPacket(packet, router, neighbor);
-//   return true;
-// }
-//
-//
-// Ptr<Packet>
-// ReactiveAnt::NextHopPacket(AnthocnetRouting router) {
-//   AntHeader antHeader = GetHeader();
-//   antHeader.AddVisitedNode(router.GetAddress());
-//   antHeader.m_hopCount++;
-//   auto device = router.GetDevice();
-//   antHeader.m_timeEstimate = (device.QueueSize() + 1)*device.SendingTimeEst();
-//   auto packet = Create<Packet>();
-//   packet -> AddHeader(antHeader);
-//   packet -> AddHeader(AntTypeHeader(species));
-//
-//   return packet;
-// }
+
 
 Ptr<Packet>
 ReactiveAnt::ToPacket() {

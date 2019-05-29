@@ -351,7 +351,7 @@ void AnthocnetRouting::NotifyInterfaceUp (uint32_t interface) {
   InstallSockets();
   InstallNeighborFactory();
   InstallLinkFailureCallback();
-
+  InstallRouteRepairCallback();
 }
 
 void AnthocnetRouting::InstallSockets() {
@@ -411,6 +411,17 @@ void AnthocnetRouting::InstallLinkFailureCallback() {
     device.SubmitExpedited(MakeSendQueueEntry<BroadcastQueueEntry>(broadcastSocket, packet, 0, InetSocketAddress(ifAddress.GetBroadcast(), ANTHOCNET_PORT)));
     NS_LOG_UNCOND("Link failure called!");
   });
+}
+
+void AnthocnetRouting::InstallRouteRepairCallback() {
+  Ptr<Socket> socket = m_impl -> m_broadcastSocket;
+  AntHill hill = m_impl -> m_antHill;
+  auto ifAddr = GetInterfaceAddress();
+  auto callback = [hill, socket ,ifAddr] (Ipv4Address source, Ipv4Address dest) mutable {
+    auto queen = hill.Get<RepairQueen>();
+    auto ant = queen -> CreateNew(source, dest);
+    return MakeSendQueueEntry<BroadcastQueueEntry>(socket, ant -> ToPacket(), 0, InetSocketAddress(ifAddr.GetBroadcast(), ANTHOCNET_PORT));
+  };
 }
 
 void AnthocnetRouting::NotifyInterfaceDown (uint32_t interface) {

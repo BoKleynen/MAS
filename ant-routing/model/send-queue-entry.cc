@@ -54,6 +54,11 @@ UnicastQueueEntry::SetRoute(Ptr<Ipv4Route> route) {
   m_route = route;
 }
 
+Ptr<Ipv4Route>
+UnicastQueueEntry::GetRoute() {
+  return m_route;
+}
+
 // BroadcastQueueEntry definition ----------------------------------------------
 
 BroadcastQueueEntry::BroadcastQueueEntry(Ptr<Socket> socket, Ptr<Packet> packet, uint32_t flags, InetSocketAddress sockAddr)

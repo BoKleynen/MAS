@@ -103,7 +103,7 @@ private:
   int m_nSinks;
   Scenario m_scenario;
 
-  double TotalTime = 150.0;
+  double TotalTime = 200.0;
   std::string m_protocolName;
 
   int nodePause = 20;

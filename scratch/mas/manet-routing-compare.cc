@@ -18,7 +18,12 @@ main (int argc, char *argv[])
 RoutingExperimentSuite::RoutingExperimentSuite (uint8_t nSimulations)
   : m_nSimulations (nSimulations)
 {
-  m_scenarios.push_back (Scenario (20, 250));
+  m_scenarios.push_back (Scenario (25, 500));
+  m_scenarios.push_back (Scenario (30, 550));
+  m_scenarios.push_back (Scenario (35, 590));
+  m_scenarios.push_back (Scenario (40, 630));
+  m_scenarios.push_back (Scenario (45, 670));
+  // m_scenarios.push_back (Scenario (50, 750));
   // m_scenarios.push_back (Scenario (75, 875));
   // m_scenarios.push_back (Scenario (100, 1000));
   // m_scenarios.push_back (Scenario (125, 1125));
@@ -28,15 +33,22 @@ RoutingExperimentSuite::RoutingExperimentSuite (uint8_t nSimulations)
 void
 RoutingExperimentSuite::RunSuite ()
 {
-  int nSinks = 10;
+  std::vector<int> protocols;
+  protocols.push_back(2);
+  protocols.push_back(4);
+
+  int nSinks = 5;
   for (auto scenario : m_scenarios)
   {
-    for (int i = 0; i < m_nSimulations; i++)
+    for (auto protocol : protocols)
     {
-      RoutingExperiment experiment (4, nSinks, scenario);
-      experiment.Run ();
-      m_results.push_back (experiment.GetResult ());
-      std::cout << experiment.GetResult () << std::endl << std::flush;
+      for (int i = 0; i < m_nSimulations; i++)
+      {
+        RoutingExperiment experiment (protocol, nSinks, scenario);
+        experiment.Run ();
+        m_results.push_back (experiment.GetResult ());
+        std::cout << experiment.GetResult () << std::endl << std::flush;
+      }
     }
   }
 }
@@ -135,7 +147,7 @@ RoutingExperiment::GetResult ()
       nDataFlows++;
       totalAverageDelay += HistHelper (flowStats.delayHistogram).Average ();
       totalAverageJitter += HistHelper (flowStats.jitterHistogram).Average ();
-      result.throughput += static_cast<double> (flowStats.rxBytes) * 8.0 / flowStats.timeLastRxPacket.GetSeconds () - flowStats.timeFirstTxPacket.GetSeconds () / 1024.0;
+      result.throughput += static_cast<double> (flowStats.rxBytes) / static_cast<double> (flowStats.timeLastRxPacket.GetSeconds () - flowStats.timeFirstTxPacket.GetSeconds ()) / 1024.0 * 8.0;
       txDataPackets += static_cast<double> (flowStats.txPackets);
       rxDataPackets += static_cast<double> (flowStats.rxPackets);
       dataBytes += static_cast<double> (flowStats.rxBytes);
@@ -236,7 +248,7 @@ void
 RoutingExperiment::SetupNodes ()
 {
   NS_LOG_INFO ("Setting up nodes.");
-  m_adhocNodes.Create (m_scenario.nNodes - 20);
+  m_adhocNodes.Create (m_scenario.nNodes - 2*m_nSinks);
   m_senderNodes.Create (m_nSinks);
   m_receiverNodes.Create (m_nSinks);
   m_allNodes.Add (m_adhocNodes);

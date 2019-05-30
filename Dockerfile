@@ -27,7 +27,8 @@ RUN apt-get install -y \
   libxml2 \
   libxml2-dev \
   vtun \
-  lxc
+  lxc \
+  gnuplot
 
 RUN mkdir -p $HOME/repos
 WORKDIR $HOME/repos

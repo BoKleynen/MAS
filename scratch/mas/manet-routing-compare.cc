@@ -293,8 +293,8 @@ RoutingExperiment::SetupMobility ()
   streamIndex += taPositionAlloc->AssignStreams (streamIndex);
 
   mobilityAdhoc.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
-                                  "Speed", StringValue ("5"),
-                                  "Pause", StringValue ("20"),
+                                  "Speed", StringValue ("ns3::ConstantRandomVariable[Constant=5.0]"),
+                                  "Pause", StringValue ("ns3::ConstantRandomVariable[Constant=20.0]"),
                                   "PositionAllocator", PointerValue (taPositionAlloc));
   mobilityAdhoc.SetPositionAllocator (taPositionAlloc);
   mobilityAdhoc.Install (m_allNodes);
@@ -308,26 +308,28 @@ RoutingExperiment::SetupProtocol ()
   AodvHelper aodv;
   OlsrHelper olsr;
   DsdvHelper dsdv;
+  AnthocnetHelper anthocnet;
 
   Ipv4ListRoutingHelper list;
   InternetStackHelper internet;
 
   switch (m_protocol)
     {
-    case 1:
-      list.Add (olsr, 100);
-      m_protocolName = "OLSR";
-      break;
+    // case 1:
+    //   list.Add (olsr, 100);
+    //   m_protocolName = "OLSR";
+    //   break;
     case 2:
       list.Add (aodv, 100);
       m_protocolName = "AODV";
       break;
-    case 3:
-      list.Add (dsdv, 100);
-      m_protocolName = "DSDV";
-      break;
+    // case 3:
+    //   list.Add (dsdv, 100);
+    //   m_protocolName = "DSDV";
+    //   break;
     case 4:
       // anthocnet
+      list.Add (anthocnet, 100);
       m_protocolName = "AntHocNet";
       break;
     default:

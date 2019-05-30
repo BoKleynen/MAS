@@ -283,8 +283,11 @@ RoutingExperiment::SetupMobility ()
 
   ObjectFactory pos;
   pos.SetTypeId ("ns3::RandomRectanglePositionAllocator");
-  pos.Set ("X", IntegerValue (m_scenario.size));
-  pos.Set ("Y", IntegerValue (m_scenario.size));
+  std::stringstream ss;
+  ss << "ns3::UniformRandomVariable[Min=0.0|Max=" << m_scenario.size << "]";
+  std::string s = ss.str ();
+  pos.Set ("X", StringValue (s));
+  pos.Set ("Y", StringValue (s));
 
   Ptr<PositionAllocator> taPositionAlloc = pos.Create ()->GetObject<PositionAllocator> ();
   streamIndex += taPositionAlloc->AssignStreams (streamIndex);

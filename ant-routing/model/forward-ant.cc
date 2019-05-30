@@ -16,6 +16,8 @@ ForwardAnt::ForwardAnt(AntHeader header)
 
 bool
 ForwardAnt::HandleAtDestination(AnthocnetRouting router) {
+  NS_LOG_UNCOND(router.GetAddress() << "@" << Simulator::Now().GetSeconds() << "Forward ant: handling at destination");
+
   // only continue if we're at the destination
   if(m_header.GetDestination() != router.GetAddress()) {
     return false;
@@ -30,6 +32,7 @@ ForwardAnt::HandleAtDestination(AnthocnetRouting router) {
 
 bool
 ForwardAnt::HandleUnicast(AnthocnetRouting router) {
+  NS_LOG_UNCOND(router.GetAddress() << "@" << Simulator::Now().GetSeconds() <<"Forward ant: handling unicast");
   auto routingTable = router.GetRoutingTable();
   if(!routingTable.HasPheromoneEntryFor(m_header.GetDestination())) {
     return false;
@@ -50,6 +53,7 @@ ForwardAnt::HandleUnicast(AnthocnetRouting router) {
 
 Ptr<Packet>
 ForwardAnt::NextHopPacket(AnthocnetRouting router) {
+  NS_LOG_UNCOND(router.GetAddress() << "@" << Simulator::Now().GetSeconds() << "forward ant: handling next hop");
   AntHeader antHeader(m_header);
   antHeader.AddVisitedNode(router.GetAddress());
   antHeader.m_hopCount++;

@@ -48,6 +48,11 @@ Ipv4Header UnicastQueueEntry::GetHeader() {
   return m_header;
 }
 
+Ptr<const Packet>
+UnicastQueueEntry::GetPacket() {
+  return m_packet;
+}
+
 
 void
 UnicastQueueEntry::SetRoute(Ptr<Ipv4Route> route) {
@@ -73,6 +78,12 @@ BroadcastQueueEntry::operator()() {
 
   return (m_broadcastSocket -> SendTo(m_packet, m_flags, m_socketAddress)) != -1;
 }
+
+Ptr<const Packet>
+BroadcastQueueEntry::GetPacket() {
+  return m_packet;
+}
+
 
 // UnicastAntQueueEntry definition ------------------------------------------------
 // UnicastAntQueueEntry::UnicastAntQueueEntry(Ptr<Socket> socket, Ptr<Packet> packet,

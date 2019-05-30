@@ -106,16 +106,19 @@ AntNetDevice::AntNetDeviceImpl::SendNext() {
   auto send = [] (auto nxt) {
     nxt->Sending(true);
     nxt->SendStartTime(Simulator::Now());
+    NS_LOG_UNCOND("Packet sent:" << *(nxt->GetPacket()));
     (*nxt)();
   };
 
   if(!m_fastQueue.empty()) {
+    NS_LOG_UNCOND("Sending from fast queue");
     auto nxt = m_fastQueue.front();
     send(nxt);
     return;
   }
 
   if(!m_stdQueue.empty()) {
+    NS_LOG_UNCOND("Sending from std queue:");
     auto nxt = m_stdQueue.front();
     send(nxt);
     return;
@@ -139,7 +142,7 @@ AntNetDevice::AntNetDeviceImpl::HookupTraces(Ptr<NetDevice> device) {
   Ptr<WifiMac> wifiMac = wifiDev -> GetMac();
   Ptr<RegularWifiMac> regWifiMac = wifiMac -> GetObject<RegularWifiMac>();
 
-  wifiMac -> TraceConnectWithoutContext(MacTxDrop, MakeCallback(&AntNetDevice::AntNetDeviceImpl::MacTxDropCallback, this));
+  //wifiMac -> TraceConnectWithoutContext(MacTxDrop, MakeCallback(&AntNetDevice::AntNetDeviceImpl::MacTxDropCallback, this));
   regWifiMac -> TraceConnectWithoutContext(TxErrHeader, MakeCallback(&AntNetDevice::AntNetDeviceImpl::TxErrHeaderCallback, this));
   regWifiMac -> TraceConnectWithoutContext(TxOkHeader, MakeCallback(&AntNetDevice::AntNetDeviceImpl::TxOkHeaderCallback, this));
 
@@ -161,7 +164,7 @@ AntNetDevice::AntNetDeviceImpl::UnhookTraces(Ptr<NetDevice> device) {
   Ptr<RegularWifiMac> regWifiMac = wifiMac -> GetObject<RegularWifiMac>();
 
 
-  wifiMac -> TraceDisconnectWithoutContext(MacTxDrop, MakeCallback(&AntNetDevice::AntNetDeviceImpl::MacTxDropCallback, this));
+  //wifiMac -> TraceDisconnectWithoutContext(MacTxDrop, MakeCallback(&AntNetDevice::AntNetDeviceImpl::MacTxDropCallback, this));
   regWifiMac -> TraceDisconnectWithoutContext(TxErrHeader, MakeCallback(&AntNetDevice::AntNetDeviceImpl::TxErrHeaderCallback, this));
   regWifiMac -> TraceDisconnectWithoutContext(TxOkHeader, MakeCallback(&AntNetDevice::AntNetDeviceImpl::TxOkHeaderCallback, this));
 }
@@ -195,6 +198,7 @@ AntNetDevice::AntNetDeviceImpl::DroppedPacketCallback() {
       auto source = frontEntry -> GetRoute() -> GetSource();
       auto dest = frontEntry -> GetRoute() -> GetDestination();
       if( m_routeRepairCallback) {
+        NS_LOG_UNCOND("Submitted route repair ant");
         auto entry = m_routeRepairCallback(source, dest);
         SubmitExpedited(entry);
       }

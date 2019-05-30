@@ -174,7 +174,7 @@ AnthocnetRouting::RouteInput  (Ptr<const Packet> packet,
   NS_ASSERT (m_impl -> m_ipv4->GetInterfaceForDevice (ingressDevice) >= 0);
 
   NS_LOG_UNCOND("router " << GetAddress() << "@" << Simulator::Now().GetSeconds()<< " s : routing input: from " << header.GetSource() << " to: " << header.GetDestination());
-
+  NS_LOG_UNCOND("router " << GetAddress() << "@" << Simulator::Now().GetSeconds() << "- packet: " << *packet);
 
   uint32_t ingressInterfaceIndex = GetInterfaceIndexForDevice(ingressDevice);
 
@@ -251,12 +251,12 @@ AnthocnetRouting::HandleIngressForward(Ptr<const Packet> packet,
 
     ExpeditedTag tag;
     if(packet -> PeekPacketTag(tag)) {
-      NS_LOG_UNCOND("Expedited Tag detected ---------------------");
+      NS_LOG_UNCOND("router " << GetAddress() << "@" << Simulator::Now().GetSeconds()<< "Expedited Tag detected ---------------------");
       optNeighbor.Get().SubmitExpeditedPacket(packet, header, ufcb);
     } else {
-      NS_LOG_UNCOND("Ordinary packet ------------------------------");
+      NS_LOG_UNCOND("router " << GetAddress() << "@" << Simulator::Now().GetSeconds()<< "Ordinary packet ------------------------------");
       optNeighbor.Get().SubmitPacket(packet, header, ufcb);
-      NS_LOG_UNCOND("Sumbitted ordinary packet --------------------");
+      NS_LOG_UNCOND("router " << GetAddress() << "@" << Simulator::Now().GetSeconds()<<"Sumbitted ordinary packet --------------------");
     }
 
     return true;

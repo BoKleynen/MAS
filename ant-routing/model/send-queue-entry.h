@@ -25,6 +25,7 @@ public:
   // call operator, each queue entry should be callable (regardless of the type)
   // call executes the entry in the send queue. Returning a boolean indicating success
   virtual bool operator()() = 0;
+  virtual Ptr<const Packet> GetPacket() = 0;
 
   bool Sending();
   void Sending(bool sending);
@@ -42,6 +43,8 @@ struct UnicastQueueEntry : public SendQueueEntry {
 public:
   UnicastQueueEntry( Ptr<Ipv4Route> route, Ptr<const Packet> packet,const Ipv4Header& header,  UnicastCallback ufcb);
   virtual bool operator()() override;
+  virtual Ptr<const Packet> GetPacket() override;
+
 
   Ipv4Header GetHeader();
   void SetRoute(Ptr<Ipv4Route> route);
@@ -59,6 +62,8 @@ struct BroadcastQueueEntry : public SendQueueEntry {
 public:
   BroadcastQueueEntry(Ptr<Socket> socket, Ptr<Packet> packet, uint32_t flags, InetSocketAddress sockAddr);
   virtual bool operator()() override;
+  virtual Ptr<const Packet> GetPacket() override;
+
 private:
   Ptr<Socket> m_broadcastSocket;
   Ptr<Packet> m_packet;

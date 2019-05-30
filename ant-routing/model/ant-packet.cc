@@ -73,7 +73,7 @@ AntTypeHeader::SetAntType (AntType antType)
 void
 AntTypeHeader::Print (std::ostream &os) const
 {
-  os << "hello \n";
+  os << (uint32_t)m_antType;
 }
 
 // --------------- AntHeader  ---------------
@@ -179,7 +179,19 @@ AntHeader::Deserialize (Buffer::Iterator start)
 void
 AntHeader::Print (std::ostream &os) const
 {
-  os << "we don't do printing";
+  os << "Ant packet { "
+     << "source: " << m_source
+     << ", destination: " << m_dst
+     << ", hopCount: " << (uint32_t) m_hopCount
+     << ", broadcastCount: " << (uint32_t) m_broadcastCount
+     << ", generation: " << m_generation
+     << ", timeEstimate: " << m_timeEstimate
+     << ", visitedSize: " << (uint32_t) m_visitedSize
+     << ", visitedNodes: [";
+  for(auto addr : m_visitedNodes) {
+    os << addr << ", ";
+  }
+    os << "] }";
 }
 
 uint8_t AntHeader::GetHopCount() const {
@@ -256,7 +268,7 @@ TypeId HelloHeader::GetTypeId () {
   static TypeId tid = TypeId ("ns3::ant_routing::HelloHeader")
     .SetParent<Header> ()
     .SetGroupName ("AntRouting")
-    .AddConstructor<LinkFailureNotification>();
+    .AddConstructor<HelloHeader>();
   return tid;
 }
 

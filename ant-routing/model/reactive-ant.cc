@@ -28,9 +28,10 @@ ReactiveAnt::ReactiveAnt(Ptr<Packet> packet)
 }
 
 void ReactiveAnt::Visit(AnthocnetRouting router){
-  NS_LOG_UNCOND("visiting node with forward ant");
+  NS_LOG_UNCOND(router.GetAddress() << "@" << Simulator::Now().GetSeconds() << " visiting node with forward ant");
 
   if(DetectLoop(router.GetAddress())) {
+    NS_LOG_UNCOND(router.GetAddress() << "@" << Simulator::Now().GetSeconds() << "Detected loop");
     return;
   }
 
@@ -63,26 +64,15 @@ ReactiveAnt::HandleNeighborship(AnthocnetRouting router) {
   router.GetNeighborManager().OtherMessageReceived(m_header.m_visitedNodes.back(), router.GetInterfaceAddress());
 }
 
-// bool
-// ReactiveAnt::HandleAtDestination(AnthocnetRouting router) {
-//   // only continue if we're at the destination
-//   if(GetHeader().GetDestination() != router.GetAddress()) {
-//     return false;
-//   }
-//   m_header.AddVisitedNode(router.GetAddress());
-//
-//   auto bwAnt = router.GetAntHill().Get<BackwardQueen>()->CreateFromForwardAnt(GetHeader());
-//   bwAnt -> Visit(router);
-//
-//   return true;
-// }
-
 bool
 ReactiveAnt::HandleBroadcast(AnthocnetRouting router){
+  NS_LOG_UNCOND(router.GetAddress() << "@" << Simulator::Now().GetSeconds() << "Handling reactive ant");
   auto routingTable = router.GetRoutingTable();
   if(routingTable.HasPheromoneEntryFor(GetHeader().GetDestination())) {
     return false;
   }
+
+  NS_LOG_UNCOND(router.GetAddress() << "@" << Simulator::Now().GetSeconds() << "handling forward ant -- broadcast initiated");
 
   auto packet = NextHopPacket(router);
   BroadcastPacket(packet, router);

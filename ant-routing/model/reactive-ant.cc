@@ -217,7 +217,7 @@ AntQueenImpl<ReactiveAnt>::ReactiveQueenImpl::ReactiveQueenImpl()
 // ReactiveQueen ---------------------------------------------------------------
 
 // static variables and functions-----------------------------------------------
-double AntQueenImpl<ReactiveAnt>::s_admissionRatio = 1.6;
+double AntQueenImpl<ReactiveAnt>::s_admissionRatio = 1.5;
 
 bool
 AntQueenImpl<ReactiveAnt>::HasRightAntType(const AntTypeHeader& typeHeader) {

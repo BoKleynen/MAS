@@ -1,5 +1,6 @@
 #include "manet-routing-compare.h"
 #include "ns3/ant-routing-module.h"
+#include "ns3/netanim-module.h"
 
 using namespace ns3;
 
@@ -18,6 +19,8 @@ main (int argc, char *argv[])
 RoutingExperimentSuite::RoutingExperimentSuite (uint8_t nSimulations)
   : m_nSimulations (nSimulations)
 {
+
+  m_scenarios.push_back (Scenario (20, 450));
   m_scenarios.push_back (Scenario (25, 500));
   m_scenarios.push_back (Scenario (30, 550));
   m_scenarios.push_back (Scenario (35, 590));
@@ -111,6 +114,24 @@ RoutingExperiment::Run ()
   NS_LOG_INFO ("Run Simulation.");
 
   // CheckThroughput ();
+  AnimationInterface anim (tr_name + ".netanim");
+
+  for (uint32_t i = 0; i < m_senderNodes.GetN (); i++)
+  {
+    anim.UpdateNodeDescription (m_senderNodes.Get (i), "SEND"); // Optional
+    anim.UpdateNodeColor (m_senderNodes.Get (i), 255, 0, 0); // Optional
+  }
+
+  for (uint32_t i = 0; i < m_receiverNodes.GetN (); i++)
+  {
+    anim.UpdateNodeDescription (m_receiverNodes.Get (i), "RECV"); // Optional
+    anim.UpdateNodeColor (m_receiverNodes.Get (i), 0, 255, 0); // Optional
+  }
+
+  anim.EnablePacketMetadata (); // Optional
+  anim.EnableIpv4RouteTracking ("routingtable-wireless.xml", Seconds (0), Seconds (5), Seconds (0.25)); //Optional
+  anim.EnableWifiMacCounters (Seconds (0), Seconds (10)); //Optional
+  anim.EnableWifiPhyCounters (Seconds (0), Seconds (10)); //Optional
 
   Simulator::Stop (Seconds (TotalTime));
   Simulator::Run ();
@@ -126,6 +147,7 @@ RoutingExperiment::GetResult ()
   Result result;
   result.protocolName = m_protocolName;
   result.nNodes = m_allNodes.GetN ();
+  result.throughput = 0;
 
   double totalAverageDelay = 0;
   double totalAverageJitter = 0;
@@ -432,7 +454,7 @@ HistHelper::Average ()
   {
     total += static_cast<double> (m_histogram.GetBinCount (i)) * (m_histogram.GetBinStart (i) + m_histogram.GetBinWidth (i) / 2.0);
   }
-  return total / m_histogram.GetNBins ();
+  return total / static_cast<double> (m_histogram.GetNBins ());
 }
 
 std::ostream& operator <<(std::ostream& os, const Result& result)

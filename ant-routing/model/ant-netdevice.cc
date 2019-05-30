@@ -94,6 +94,7 @@ AntNetDevice::AntNetDeviceImpl::SubmitTo(std::shared_ptr<SendQueueEntry> entry, 
   bool idle = IsIdle();
   queue.push(entry);
   if(idle) {
+    NS_LOG_UNCOND("Idle queue - sending next packet");
     SendNext();
   }
 }
@@ -196,6 +197,7 @@ AntNetDevice::AntNetDeviceImpl::DroppedPacketCallback() {
       auto dest = frontEntry -> GetRoute() -> GetDestination();
       if( m_routeRepairCallback) {
         auto entry = m_routeRepairCallback(source, dest);
+        NS_LOG_UNCOND("RouteRepair callback - source" << source);
         SubmitExpedited(entry);
       }
     }

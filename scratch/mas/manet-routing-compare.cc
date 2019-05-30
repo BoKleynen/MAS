@@ -8,6 +8,7 @@ NS_LOG_COMPONENT_DEFINE ("manet-routing-compare");
 int
 main (int argc, char *argv[])
 {
+  NS_LOG_UNCOND("Starting manet routing compare");
   RoutingExperimentSuite experimentSuite (1);
   experimentSuite.RunSuite ();
 }
@@ -17,22 +18,22 @@ main (int argc, char *argv[])
 RoutingExperimentSuite::RoutingExperimentSuite (uint8_t nSimulations)
   : m_nSimulations (nSimulations)
 {
-  m_scenarios.push_back (Scenario (50, 750));
-  m_scenarios.push_back (Scenario (75, 875));
-  m_scenarios.push_back (Scenario (100, 1000));
-  m_scenarios.push_back (Scenario (125, 1125));
-  m_scenarios.push_back (Scenario (150, 1250));
+  m_scenarios.push_back (Scenario (20, 250));
+  // m_scenarios.push_back (Scenario (75, 875));
+  // m_scenarios.push_back (Scenario (100, 1000));
+  // m_scenarios.push_back (Scenario (125, 1125));
+  // m_scenarios.push_back (Scenario (150, 1250));
 }
 
-void 
+void
 RoutingExperimentSuite::RunSuite ()
 {
   int nSinks = 10;
-  for (auto scenario : m_scenarios) 
+  for (auto scenario : m_scenarios)
   {
     for (int i = 0; i < m_nSimulations; i++)
     {
-      RoutingExperiment experiment (2, nSinks, scenario);
+      RoutingExperiment experiment (4, nSinks, scenario);
       experiment.Run ();
       m_results.push_back (experiment.GetResult ());
       std::cout << experiment.GetResult () << std::endl << std::flush;
@@ -40,7 +41,7 @@ RoutingExperimentSuite::RunSuite ()
   }
 }
 
-std::vector<Result> 
+std::vector<Result>
 RoutingExperimentSuite::GetResult () const
 {
   return m_results;
@@ -122,7 +123,7 @@ RoutingExperiment::GetResult ()
   double controlPackets = 0;
   double controlBytes = 0;
   double dataBytes = 0;
-  
+
   FlowMonitor::FlowStatsContainer stats = m_flowmon->GetFlowStats ();
   Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier> (m_flowmonHelper.GetClassifier ());
   for (auto iter = stats.begin (); iter != stats.end (); iter++)
@@ -393,7 +394,7 @@ RoutingExperiment::TraceName ()
   std::stringstream ss4;
   ss4 << rate;
   std::string sRate = ss4.str ();
-  
+
   NS_LOG_INFO ("Configure Tracing.");
   return tr_name + "_" + m_protocolName +"_" + nodes + "nodes_" + sNodeSpeed + "speed_" + sNodePause + "pause_" + sRate + "rate";
 }
@@ -424,9 +425,9 @@ HistHelper::Average ()
 
 std::ostream& operator <<(std::ostream& os, const Result& result)
 {
-  return os << "Result { protocolName: " 
-            << result.protocolName 
-            << ", nNodes: " 
+  return os << "Result { protocolName: "
+            << result.protocolName
+            << ", nNodes: "
             << result.nNodes
             << ", averageDelay: "
             << result.averageDelay
@@ -434,7 +435,7 @@ std::ostream& operator <<(std::ostream& os, const Result& result)
             << result.averageJitter
             << ", packetDeliveryRatio: "
             << result.packetDeliveryRatio
-            << "%, throughput: "
+            << "\%, throughput: "
             << result.throughput
             << "kbps, packetOverhead: "
             << result.packetOverhead
@@ -450,4 +451,3 @@ Scenario::Scenario (int nNodes, int size)
     size (size)
 {
 }
-

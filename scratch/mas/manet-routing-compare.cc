@@ -1,4 +1,5 @@
 #include "manet-routing-compare.h"
+#include "ns3/ant-routing-module.h"
 
 using namespace ns3;
 
@@ -34,7 +35,7 @@ RoutingExperimentSuite::RunSuite ()
       RoutingExperiment experiment (2, nSinks, scenario);
       experiment.Run ();
       m_results.push_back (experiment.GetResult ());
-      std::cout << experiment.GetResult ();
+      std::cout << experiment.GetResult () << std::endl << std::flush;
     }
   }
 }
@@ -115,7 +116,6 @@ RoutingExperiment::GetResult ()
 
   double totalAverageDelay = 0;
   double totalAverageJitter = 0;
-  double totalPacketDeliveryRatio = 0;
   int nDataFlows = 0;
   double rxDataPackets = 0;
   double txDataPackets = 0;
@@ -146,10 +146,9 @@ RoutingExperiment::GetResult ()
 
   result.averageDelay = totalAverageDelay / nDataFlows;
   result.averageJitter = totalAverageJitter / nDataFlows;
-  result.packetDeliveryRatio = totalPacketDeliveryRatio / nDataFlows * 100;
+  result.packetDeliveryRatio = rxDataPackets / txDataPackets * 100;
   result.packetOverhead = controlPackets / rxDataPackets;
   result.byteOverhead = controlBytes / dataBytes;
-  result.packetDeliveryRatio = rxDataPackets / txDataPackets;
 
   NS_ASSERT (nDataFlows == m_nSinks);
 

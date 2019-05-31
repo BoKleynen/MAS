@@ -250,5 +250,19 @@ std::shared_ptr<Ant> AntQueenImpl<ReactiveAnt>::CreateFrom(const AntTypeHeader& 
   }
 }
 
+double
+AntQueenImpl<ReactiveAnt>::AdmissionRatio() {
+  return s_admissionRatio;
+}
+void
+AntQueenImpl<ReactiveAnt>::AdmissionRatio(double ratio) {
+  if(ratio < 0) {
+    return;
+  }
+
+  s_admissionRatio = ratio;
+}
+
+
 } // namespace ant_routing
 } // namespace ns3

@@ -58,6 +58,9 @@ public:
 
   static constexpr AntType species = ReactiveAnt::species;
 
+  static double AdmissionRatio();
+  static void AdmissionRatio(double ratio);
+
 private:
   struct GenerationInfo;
   struct ReactiveQueenImpl;

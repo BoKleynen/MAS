@@ -55,7 +55,7 @@ RoutingExperimentSuite::RunSuite ()
 
   for (int i = 0; i < m_nSimulations; i++)
   {
-    std::cout << "\33[2K" << "Run " << i << " of " << ((uint32_t)m_nSimulations + 1 )<< "\r" << std::flush;
+    std::cout << "\33[2K" << "Run " << (i + 1) << " of " << ((uint32_t)m_nSimulations )<< "\r" << std::flush;
     ns3::RngSeedManager::SetRun(i);
     RoutingExperiment experiment (m_protocol, nSinks, m_scenario);
     experiment.Run ();

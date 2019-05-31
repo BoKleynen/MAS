@@ -31,27 +31,31 @@ struct Scenario {
 
 struct Result
 {
-    std::string protocolName;
-    uint64_t nNodes;
-    double averageDelay;
-    double averageJitter;
-    double packetDeliveryRatio;
-    double throughput; // in kbps
-    double packetOverhead;
-    double byteOverhead;
+  Result () = default;
+
+  std::string protocolName;
+  uint64_t nNodes;
+  double averageDelay;
+  double averageJitter;
+  double packetDeliveryRatio;
+  double throughput; // in kbps
+  double packetOverhead;
+  double byteOverhead;
 };
 
 class RoutingExperimentSuite
 {
 public:
-  RoutingExperimentSuite (uint8_t nSimulations);
+  RoutingExperimentSuite (uint8_t nSimulations, Scenario scenario, int protocol);
 
-  void RunSuite (void);
-  std::vector<Result> GetResult () const;
+  void RunSuite ();
+  Result GetResult () const;
 private:
-  uint8_t m_nSimulations;
+  uint8_t             m_nSimulations;
   std::vector<Result> m_results;
-  std::vector<Scenario> m_scenarios;
+  Scenario            m_scenario;
+  std::string         m_protocolName;
+  int                 m_protocol;
 };
 
 class HistHelper

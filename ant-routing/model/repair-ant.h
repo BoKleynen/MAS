@@ -44,6 +44,9 @@ public:
 
   static constexpr AntType species = RepairAnt::species;
 
+  static double AdmissionRatio();
+  static void AdmissionRatio(double ratio);
+
 private:
   struct GenerationInfo;
   struct ReactiveQueenImpl;

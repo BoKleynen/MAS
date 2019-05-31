@@ -6,13 +6,13 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("manet-routing-compare");
 
-int
-main (int argc, char *argv[])
-{
-  NS_LOG_UNCOND("Starting manet routing compare");
-  RoutingExperimentSuite experimentSuite (1);
-  experimentSuite.RunSuite ();
-}
+// int
+// main (int argc, char *argv[])
+// {
+//   NS_LOG_UNCOND("Starting manet routing compare");
+//   RoutingExperimentSuite experimentSuite (1);
+//   experimentSuite.RunSuite ();
+// }
 
 // RoutingExperimentSuite -------------------------
 

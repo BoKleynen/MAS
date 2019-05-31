@@ -503,7 +503,9 @@ AntRoutingTable::Gamma(){
 }
 void
 AntRoutingTable::Gamma(double gamma){
-  s_gamma = gamma;
+  if(0.0 <= gamma && gamma <= 1.0) {
+    s_gamma = gamma;
+  }
 }
 
 double
@@ -513,7 +515,9 @@ AntRoutingTable::Rho() {
 
 void
 AntRoutingTable::Rho(double rho) {
-  s_rho = rho;
+  if(0.0 <= rho && rho <= 1.0) {
+    s_rho = rho;
+  }
 }
 
 Time
@@ -531,7 +535,9 @@ AntRoutingTable::BestEstCoeff() {
 }
 void
 AntRoutingTable::BestEstCoeff(double coeff) {
-  s_bestEstCoeff = coeff;
+  if(0.0 <= coeff && coeff <= 1.0) {
+    s_bestEstCoeff = coeff;
+  }
 }
 
 

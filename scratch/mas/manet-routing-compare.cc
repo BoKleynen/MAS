@@ -1,3 +1,4 @@
+#include <numeric>
 #include "manet-routing-compare.h"
 #include "ns3/ant-routing-module.h"
 #include "ns3/netanim-module.h"
@@ -9,57 +10,95 @@ NS_LOG_COMPONENT_DEFINE ("manet-routing-compare");
 int
 main (int argc, char *argv[])
 {
-  NS_LOG_UNCOND("Starting manet routing compare");
-  RoutingExperimentSuite experimentSuite (1);
-  experimentSuite.RunSuite ();
-}
-
-// RoutingExperimentSuite -------------------------
-
-RoutingExperimentSuite::RoutingExperimentSuite (uint8_t nSimulations)
-  : m_nSimulations (nSimulations)
-{
-
-  m_scenarios.push_back (Scenario (20, 450));
-  m_scenarios.push_back (Scenario (25, 500));
-  m_scenarios.push_back (Scenario (30, 550));
-  m_scenarios.push_back (Scenario (35, 590));
-  m_scenarios.push_back (Scenario (40, 630));
-  m_scenarios.push_back (Scenario (45, 670));
+  std::vector<Scenario> scenarios;
+  scenarios.push_back (Scenario (20, 450));
+  scenarios.push_back (Scenario (25, 500));
+  scenarios.push_back (Scenario (30, 550));
+  scenarios.push_back (Scenario (35, 590));
+  scenarios.push_back (Scenario (40, 630));
+  scenarios.push_back (Scenario (45, 670));
   // m_scenarios.push_back (Scenario (50, 750));
   // m_scenarios.push_back (Scenario (75, 875));
   // m_scenarios.push_back (Scenario (100, 1000));
   // m_scenarios.push_back (Scenario (125, 1125));
   // m_scenarios.push_back (Scenario (150, 1250));
+
+  std::vector<int> protocols;
+  // protocols.push_back(2);
+  protocols.push_back(4);
+
+  for (auto protocol : protocols)
+  {
+    for (auto scenario : scenarios)
+    {
+      RoutingExperimentSuite experimentSuite (10, scenario, protocol);
+      experimentSuite.RunSuite ();
+      std::cout << experimentSuite.GetResult () << std::endl;
+    }
+  }
+}
+
+// RoutingExperimentSuite -------------------------
+
+RoutingExperimentSuite::RoutingExperimentSuite (uint8_t nSimulations, Scenario scenario, int protocol)
+  : m_nSimulations (nSimulations),
+    m_scenario (scenario),
+    m_protocol (protocol)
+{
+  switch (protocol)
+  {
+  case 2:
+    m_protocolName = "AODV";
+    break;
+  case 4:
+    m_protocolName = "Anthocnet";
+    break;
+  default:
+    m_protocolName = "invalid";
+    break;
+  }
 }
 
 void
 RoutingExperimentSuite::RunSuite ()
 {
-  std::vector<int> protocols;
-  protocols.push_back(2);
-  protocols.push_back(4);
-
   int nSinks = 5;
-  for (auto scenario : m_scenarios)
+
+  for (int i = 0; i < m_nSimulations; i++)
   {
-    for (auto protocol : protocols)
-    {
-      for (int i = 0; i < m_nSimulations; i++)
-      {
-        RoutingExperiment experiment (protocol, nSinks, scenario);
-        experiment.Run ();
-        m_results.push_back (experiment.GetResult ());
-        std::cout << experiment.GetResult () << std::endl << std::flush;
-      }
-    }
+    ns3::RngSeedManager::SetRun(i);        
+    RoutingExperiment experiment (m_protocol, nSinks, m_scenario);
+    experiment.Run ();
+    m_results.push_back (experiment.GetResult ());
   }
 }
 
-std::vector<Result>
+Result
 RoutingExperimentSuite::GetResult () const
 {
-  return m_results;
+  Result result;
+  result.nNodes = m_scenario.nNodes;
+  result.protocolName = m_protocolName;
+  result.averageDelay = std::accumulate(m_results.begin(), m_results.end(), 0.0, [] (double a, const Result& b) {
+    return a + b.averageDelay;
+  }) / m_results.size ();
+  result.averageJitter = std::accumulate(m_results.begin(), m_results.end(), 0.0, [] (double a, const Result& b) {
+    return a + b.averageJitter;
+  }) / m_results.size ();
+  result.packetDeliveryRatio = std::accumulate(m_results.begin(), m_results.end(), 0.0, [] (double a, const Result& b) {
+    return a + b.packetDeliveryRatio;
+  }) / m_results.size ();
+  result.throughput = std::accumulate(m_results.begin(), m_results.end(), 0.0, [] (double a, const Result& b) {
+    return a + b.throughput;
+  }) / m_results.size ();
+  result.packetOverhead = std::accumulate(m_results.begin(), m_results.end(), 0.0, [] (double a, const Result& b) {
+    return a + b.packetOverhead;
+  }) / m_results.size ();
+  result.byteOverhead = std::accumulate(m_results.begin(), m_results.end(), 0.0, [] (double a, const Result& b) {
+    return a + b.byteOverhead;
+  }) / m_results.size ();
+
+  return result;
 }
 
 // RoutingExperiment ------------------------------

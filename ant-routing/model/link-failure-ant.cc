@@ -13,9 +13,17 @@ LinkFailureAnt::LinkFailureAnt(Ptr<Packet> packet)
 void
 LinkFailureAnt::Visit(AnthocnetRouting router) {
 
+
   NS_LOG_UNCOND("Visiting with link failure ant ~~~~~~~~~~~~~~~~~~~~~~");
 
   NS_LOG_UNCOND(router.GetAddress() << "@" << Simulator::Now() << "-Received link failure notification" << m_header.m_messages.size());
+
+  // do not forward if a loop is detected
+  if (LoopDetection(router.GetAddress())) {
+    std::cout << router.GetAddress() << "@" << Simulator::Now().GetSeconds() << "LOOP DETECTED!!!" << std::endl;
+    NS_LOG_UNCOND(router.GetAddress() << "@" << Simulator::Now().GetSeconds() << "LOOP DETECTED!!!");
+    return;
+  }
 
   auto rTable = router.GetRoutingTable();
 
@@ -24,17 +32,20 @@ LinkFailureAnt::Visit(AnthocnetRouting router) {
     auto neighborAddr = m_header.m_source;
     auto dest = messageIt -> dest;
 
-    NS_LOG_UNCOND("alternative received: " << *messageIt);
     // keep track of the fact that before the update, the neighbor was the best or not for a given destination
     auto wasBest = rTable.IsBestEntryFor(neighborAddr, dest);
-    NS_LOG_UNCOND("Was best?: " << wasBest);
+    // std::cout<< "Was best?: " << wasBest << std::endl;
 
-    // update if valid estimates, remove if not
+    //update if valid estimates, remove if not
     if(messageIt -> HasValidEstimates()) {
+      std::cout << "updated neighbor" << std::endl;
       rTable.UpdatePheromoneEntry(neighborAddr, dest, messageIt -> bestTimeEstimate, messageIt -> bestHopEstimate);
     } else {
+      std::cout << "deleted neighbor" << std::endl;
       rTable.DeletePheromoneEntryFor(neighborAddr, dest);
     }
+
+    // rTable.DeletePheromoneEntryFor(neighborAddr, dest);
 
     // check if has lost the best entry for the destination
     if(wasBest && !rTable.IsBestEntryFor(neighborAddr, dest)) {
@@ -46,11 +57,6 @@ LinkFailureAnt::Visit(AnthocnetRouting router) {
   // do not forward if there are no best routes lost
   if (altRoutes.size() == 0){
     NS_LOG_UNCOND(router.GetAddress() << "@" << Simulator::Now().GetSeconds() << "Dropped Link failure notification, no lost best routes");
-    return;
-  }
-  // do not forward if a loop is detected
-  if (LoopDetection(router.GetAddress())) {
-    NS_LOG_UNCOND(router.GetAddress() << "@" << Simulator::Now().GetSeconds() << "LOOP DETECTED!!!");
     return;
   }
 
@@ -84,6 +90,7 @@ LinkFailureAnt::NextHop(AnthocnetRouting router, std::vector<AlternativeRoute> a
 
 bool
 LinkFailureAnt::LoopDetection(Ipv4Address addr) {
+
   for(auto iter = m_header.m_visitedNodes.begin(); iter != m_header.m_visitedNodes.end(); iter ++) {
     if(addr == *iter) {
       return true;

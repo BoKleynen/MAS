@@ -169,7 +169,7 @@ public:
     static uint32_t GetSerializedSize (void);
     void Serialize (Buffer::Iterator start) const;
     uint32_t Deserialize (Buffer::Iterator start);
-    bool HasValidEstimates();
+    bool HasValidEstimates() const;
     void SetValidEstimates(bool val);
   };
 

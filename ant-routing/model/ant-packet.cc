@@ -416,6 +416,7 @@ LinkFailureNotification::Message::Serialize (Buffer::Iterator i) const
   //i.Write ((const uint8_t *) &(nanoTime), sizeof(uint64_t));
   i.WriteHtonU64(bestTimeEstimate.GetInteger());
   i.WriteU8 (bestHopEstimate);
+  i.WriteU8(flags);
 }
 
 uint32_t
@@ -430,13 +431,15 @@ LinkFailureNotification::Message::Deserialize (Buffer::Iterator start)
   bestTimeEstimate = Time::From(rcvdTime);
   // bestTimeEstimate = NanoSeconds (rcvdTime);
   bestHopEstimate = i.ReadU8 ();
+  flags = i.ReadU8 ();
+
 
   uint32_t dist = i.GetDistanceFrom (start);
   return dist;
 }
 
 bool
-LinkFailureNotification::Message::HasValidEstimates() {
+LinkFailureNotification::Message::HasValidEstimates() const {
   return flags != 0;
 }
 void
@@ -445,11 +448,19 @@ LinkFailureNotification::Message::SetValidEstimates(bool val) {
 }
 
 std::ostream& operator <<(std::ostream& os, const LinkFailureNotification::Message& message) {
-return os << "Message { "
-          << "Destination: " << message.dest
-          << "best time estimate: " << message.bestTimeEstimate
-          << "best hop estimate: " << (uint32_t)(message.bestHopEstimate)
-          << " }";
+  if(message.HasValidEstimates()) {
+    os  << "Message { "
+        << "Destination: " << message.dest
+        << "best time estimate: " << message.bestTimeEstimate
+        << "best hop estimate: " << (uint32_t)(message.bestHopEstimate)
+        << " }";
+  } else {
+    os  << "Message { "
+        << "Destination: " << message.dest
+        << " }";
+  }
+  return os;
+
 }
 
 } // namespace ant_routing

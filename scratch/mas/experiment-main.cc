@@ -33,6 +33,20 @@ const std::vector<std::pair<bool, bool>> comboVector {
   std::pair<bool, bool> { false, false }
   };
 
+// update on failure -----------------------------------------------------------
+void UpdateOnFailureSetter(bool val) {
+  ant_routing::LinkFailureAnt::PheromoneUpdatesOnFailureEnabled(val);
+}
+
+void UpdateOnFailurePrinter(bool val, ant_experiment::Result result) {
+  std::cout << std::boolalpha;
+  std::cout << "Pheromone update on failure enabled: " << val << " - " << result << std::endl;
+  std::cout << std::noboolalpha;
+}
+
+const std::vector<bool> onOffVector { true, false };
+
+
 // PacketBeta experiment -------------------------------------------------------
 void PacketBetaSetter(double val) {
   ant_routing::AntRoutingTable::PacketBeta(val);
@@ -97,6 +111,10 @@ main (int argc, char *argv[])
   std::cout << "Running the ant activation experiment: " << std::endl;
   ant_experiment::ParamExperimentSuite antActivationExperiment;
   antActivationExperiment.RunSuite<std::pair<bool, bool>>(comboVector, AntActivationSetter, AntActivationPrinter);
+
+  std::cout << "Running the update pheromone on failure enabled experiment: " << std::endl;
+  ant_experiment::ParamExperimentSuite failurePheromoneSuite;
+  failurePheromoneSuite.RunSuite<bool>(onOffVector, UpdateOnFailureSetter, UpdateOnFailurePrinter);
 
   std::cout << "Running the packet beta experiment: " << std::endl;
   ant_experiment::ParamExperimentSuite betaPacketExperiment;

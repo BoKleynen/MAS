@@ -156,12 +156,14 @@ void ParamExperimentSuite::RunSuite(std::vector<T> paramValues,
       for (int i = 0; i < m_nSimulations; i++)
       {
         ParamExperiment experiment (4, nSinks, scenario);
+        std::cout << "\33[2K" << "Run " << (i + 1) << " of " << (uint32_t)m_nSimulations << "\r" << std::flush;
         RngSeedManager::SetRun(i+1);
         experiment.Run ();
         expResults.push_back(experiment.GetResult());
       }
       auto avgResult = AverageResult(expResults);
       m_results.push_back (avgResult);
+      std::cout << "\33[2K" << std::flush;
       printer(value, avgResult);
     }
   }

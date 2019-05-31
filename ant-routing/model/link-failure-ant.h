@@ -18,7 +18,14 @@ public:
   virtual Ptr<Packet> ToPacket() override;
 
   static constexpr AntType species = AntType::LinkFailureAnt;
+
+  static bool PheromoneUpdatesOnFailureEnabled();
+  static void PheromoneUpdatesOnFailureEnabled(bool val);
+
 private:
+
+  static bool s_pheromoneUpdatesOnFailure;
+
   LinkFailureNotification m_header;
 
   bool LoopDetection(Ipv4Address addr);

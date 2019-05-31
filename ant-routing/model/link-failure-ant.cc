@@ -5,6 +5,18 @@
 
 namespace ns3 {
 namespace ant_routing {
+
+bool LinkFailureAnt::s_pheromoneUpdatesOnFailure = true;
+
+bool LinkFailureAnt::PheromoneUpdatesOnFailureEnabled() {
+  return s_pheromoneUpdatesOnFailure;
+}
+void LinkFailureAnt::PheromoneUpdatesOnFailureEnabled(bool val) {
+  s_pheromoneUpdatesOnFailure = val;
+}
+
+
+
 LinkFailureAnt::LinkFailureAnt(Ptr<Packet> packet)
   : m_header(LinkFailureNotification()){
   packet -> RemoveHeader(m_header);
@@ -12,9 +24,6 @@ LinkFailureAnt::LinkFailureAnt(Ptr<Packet> packet)
 
 void
 LinkFailureAnt::Visit(AnthocnetRouting router) {
-
-
-  NS_LOG_UNCOND("Visiting with link failure ant ~~~~~~~~~~~~~~~~~~~~~~");
 
   NS_LOG_UNCOND(router.GetAddress() << "@" << Simulator::Now() << "-Received link failure notification" << m_header.m_messages.size());
 
@@ -36,7 +45,7 @@ LinkFailureAnt::Visit(AnthocnetRouting router) {
     // std::cout<< "Was best?: " << wasBest << std::endl;
 
     //update if valid estimates, remove if not
-    if(messageIt -> HasValidEstimates()) {
+    if(messageIt -> HasValidEstimates() && PheromoneUpdatesOnFailureEnabled()) {
       rTable.UpdatePheromoneEntry(neighborAddr, dest, messageIt -> bestTimeEstimate, messageIt -> bestHopEstimate);
     } else {
       rTable.DeletePheromoneEntryFor(neighborAddr, dest);

@@ -97,55 +97,15 @@ ParamExperimentSuite::ParamExperimentSuite (uint8_t nSimulations)
   m_scenarios.push_back (Scenario (35, 590));
   m_scenarios.push_back (Scenario (40, 630));
   m_scenarios.push_back (Scenario (45, 670));
-  // m_scenarios.push_back (Scenario (50, 750));
-  // m_scenarios.push_back (Scenario (75, 875));
-  // m_scenarios.push_back (Scenario (100, 1000));
-  // m_scenarios.push_back (Scenario (125, 1125));
-  // m_scenarios.push_back (Scenario (150, 1250));
+
 }
 
-// void
-// ParamExperimentSuite::RunSuite ()
-// {
-//   std::vector<double> rhoValues {0.0, 0.25, 0.50, 0.75, 1.0 };
-//
-//   int nSinks = 5;
-//   for (auto scenario : m_scenarios)
-//   {
-//     for (auto value : rhoValues)
-//     {
-//       std::vector<Result> expResults;
-//       for (int i = 0; i < m_nSimulations; i++)
-//       {
-//         ParamExperiment experiment (4, nSinks, scenario);
-//         RngSeedManager::SetRun(i+1);
-//         experiment.Run ();
-//         expResults.push_back(experiment.GetResult());
-//       }
-//       auto avgResult = AverageResult(expResults);
-//       m_results.push_back (avgResult);
-//       std::cout << "Rho: " << value << " " << avgResult << std::endl << std::flush;
-//     }
-//   }
-// }
 
 std::vector<Result>
 ParamExperimentSuite::GetResult () const
 {
   return m_results;
 }
-
-// ParamExperiment ------------------------------
-
-// ParamExperiment::ParamExperiment ()
-//   : port (3001),
-//     bytesTotal (0),
-//     packetsReceived (0),
-//     m_traceMobility (false),
-//     m_protocol (2), // AODV
-//     m_txp(7.5)
-// {
-// }
 
 ParamExperiment::ParamExperiment (uint32_t protocol, int nSinks, Scenario scenario)
 : port (3001),

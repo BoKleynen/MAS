@@ -38,10 +38,8 @@ LinkFailureAnt::Visit(AnthocnetRouting router) {
 
     //update if valid estimates, remove if not
     if(messageIt -> HasValidEstimates()) {
-      std::cout << "updated neighbor" << std::endl;
       rTable.UpdatePheromoneEntry(neighborAddr, dest, messageIt -> bestTimeEstimate, messageIt -> bestHopEstimate);
     } else {
-      std::cout << "deleted neighbor" << std::endl;
       rTable.DeletePheromoneEntryFor(neighborAddr, dest);
     }
 

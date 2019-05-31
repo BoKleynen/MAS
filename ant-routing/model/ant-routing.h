@@ -142,6 +142,10 @@ public:
   static void SetProactiveProbability(double probability);
   static double GetProactiveProbability();
 
+  static bool GetProactiveEnabled();
+  static void SetProactiveEnabled(bool activated);
+
+
 protected:
   virtual void DoInitialize() override;
 private:
@@ -195,6 +199,7 @@ private:
   // statics
   static Time s_helloInterval;
   static double s_proactiveProbability;
+  static bool   s_proactiveEnabled;
   // constants:
   static constexpr const char* localhost = "127.0.0.1";
 

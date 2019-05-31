@@ -18,17 +18,17 @@ RoutingExperimentSuite::RoutingExperimentSuite (uint8_t nSimulations)
   : m_nSimulations (nSimulations)
 {
   m_scenarios.push_back (Scenario (50, 750));
-  m_scenarios.push_back (Scenario (75, 875));
-  m_scenarios.push_back (Scenario (100, 1000));
-  m_scenarios.push_back (Scenario (125, 1125));
-  m_scenarios.push_back (Scenario (150, 1250));
+  // m_scenarios.push_back (Scenario (75, 875));
+  // m_scenarios.push_back (Scenario (100, 1000));
+  // m_scenarios.push_back (Scenario (125, 1125));
+  // m_scenarios.push_back (Scenario (150, 1250));
 }
 
-void 
+void
 RoutingExperimentSuite::RunSuite ()
 {
   int nSinks = 10;
-  for (auto scenario : m_scenarios) 
+  for (auto scenario : m_scenarios)
   {
     for (int i = 0; i < m_nSimulations; i++)
     {
@@ -40,7 +40,7 @@ RoutingExperimentSuite::RunSuite ()
   }
 }
 
-std::vector<Result> 
+std::vector<Result>
 RoutingExperimentSuite::GetResult () const
 {
   return m_results;
@@ -122,7 +122,7 @@ RoutingExperiment::GetResult ()
   double controlPackets = 0;
   double controlBytes = 0;
   double dataBytes = 0;
-  
+
   FlowMonitor::FlowStatsContainer stats = m_flowmon->GetFlowStats ();
   Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier> (m_flowmonHelper.GetClassifier ());
   for (auto iter = stats.begin (); iter != stats.end (); iter++)
@@ -393,7 +393,7 @@ RoutingExperiment::TraceName ()
   std::stringstream ss4;
   ss4 << rate;
   std::string sRate = ss4.str ();
-  
+
   NS_LOG_INFO ("Configure Tracing.");
   return tr_name + "_" + m_protocolName +"_" + nodes + "nodes_" + sNodeSpeed + "speed_" + sNodePause + "pause_" + sRate + "rate";
 }
@@ -424,9 +424,9 @@ HistHelper::Average ()
 
 std::ostream& operator <<(std::ostream& os, const Result& result)
 {
-  return os << "Result { protocolName: " 
-            << result.protocolName 
-            << ", nNodes: " 
+  return os << "Result { protocolName: "
+            << result.protocolName
+            << ", nNodes: "
             << result.nNodes
             << ", averageDelay: "
             << result.averageDelay
@@ -450,4 +450,3 @@ Scenario::Scenario (int nNodes, int size)
     size (size)
 {
 }
-

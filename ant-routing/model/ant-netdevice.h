@@ -41,10 +41,14 @@ public:
   static double GetAlpha();
   static void SetAlpha(double alpha);
 
+  static bool GetRepairEnabled();
+  static void SetRepairEnabled(bool enabled);
+
 private:
   // the alpha value for calculating the average send time
   static double s_alpha;
   static std::size_t s_maxQueueSize;
+  static bool s_repairEnabled;
 
   static constexpr const char* MacTxDrop = "MacTxDrop";
   static constexpr const char* TxOkHeader = "TxOkHeader";

@@ -21,6 +21,7 @@ namespace ant_routing {
 
 Time AnthocnetRouting::s_helloInterval = MilliSeconds(3000);
 double AnthocnetRouting::s_proactiveProbability = 0.10;
+bool   AnthocnetRouting::s_proactiveEnabled = true;
 
 struct AnthocnetRouting::AnthocnetImpl {
 
@@ -155,7 +156,7 @@ Ptr<Ipv4Route> AnthocnetRouting::RouteOutput (Ptr<Packet> packet,
   route->SetGateway(Ipv4Address(localhost));
   route->SetOutputDevice(m_impl -> m_loopback);
 
-  if(!IsUdpForAnthocnet(packet, header)) {
+  if(!IsUdpForAnthocnet(packet, header) && GetProactiveEnabled()) {
     MaybeSendProactiveAnt(packet, header);
   }
 
@@ -510,6 +511,18 @@ double
 AnthocnetRouting::GetProactiveProbability() {
   return s_proactiveProbability;
 }
+
+bool
+AnthocnetRouting::GetProactiveEnabled() {
+  return s_proactiveEnabled;
+}
+
+void
+AnthocnetRouting::SetProactiveEnabled(bool activated) {
+  s_proactiveEnabled = activated;
+}
+
+
 
 Ipv4Address
 AnthocnetRouting::GetAddressOf(Ptr<NetDevice> device) {

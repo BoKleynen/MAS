@@ -194,6 +194,9 @@ public:
   static double Gamma();
   static void   Gamma(double gamma);
 
+  static double Rho();
+  static void   Rho(double rho);
+
   static Time   HopTime();
   static void   HopTime(Time hopTime);
 
@@ -215,6 +218,7 @@ private:
   static double s_gamma; // influence factor for new pheromones
   static Time   s_hopTime; // time to make a hop in the system (estimate)
   static double s_bestEstCoeff; // coefficient used to update the best hop and time estimate
+  static double s_rho; // coefficient for determining the balance between the impact of the hop count and time estimate;
 
   // auxillary methods
 

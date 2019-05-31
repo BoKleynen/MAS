@@ -271,8 +271,8 @@ AntNetDevice::AntNetDeviceImpl::SubmitExpedited(std::shared_ptr<SendQueueEntry> 
 // constexpr std::string AntNetDevice::TxErrHeader = "TxErrHeader";
 // static variable definition --------------------------------------------------
 double AntNetDevice::s_alpha = 0.5;
-
 std::size_t AntNetDevice::s_maxQueueSize = DEFAULT_MAX_QUEUESIZE;
+bool AntNetDevice::s_repairEnabled;
 
 // method definition -----------------------------------------------------------
 AntNetDevice::AntNetDevice() : AntNetDevice(Ptr<NetDevice>()) { }
@@ -343,6 +343,17 @@ void
 AntNetDevice::SetAlpha(double alpha) {
   s_alpha = alpha;
 }
+
+bool
+AntNetDevice::GetRepairEnabled() {
+  return s_repairEnabled;
+}
+
+void
+AntNetDevice::SetRepairEnabled(bool enabled) {
+  s_repairEnabled = enabled;
+}
+
 
 ExpeditedTag::ExpeditedTag(uint8_t expedited)
   : m_expedited(expedited) {

@@ -20,7 +20,6 @@ LinkFailureAnt::Visit(AnthocnetRouting router) {
 
   // do not forward if a loop is detected
   if (LoopDetection(router.GetAddress())) {
-    std::cout << router.GetAddress() << "@" << Simulator::Now().GetSeconds() << "LOOP DETECTED!!!" << std::endl;
     NS_LOG_UNCOND(router.GetAddress() << "@" << Simulator::Now().GetSeconds() << "LOOP DETECTED!!!");
     return;
   }

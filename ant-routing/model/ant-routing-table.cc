@@ -103,7 +103,7 @@ double AntRoutingTable::s_packetBeta = 2.0;
 double AntRoutingTable::s_gamma = 0.7; // [0, 1]
 Time   AntRoutingTable::s_hopTime = MilliSeconds(3);
 double AntRoutingTable::s_bestEstCoeff = 0.7; // [0, 1]
-double AntRoutingTable::s_rho = 1.0;
+double AntRoutingTable::s_rho = 0.5;
 
 // implementation of methods
 AntRoutingTable::AntRoutingTable() : m_table(std::make_shared<RoutingTableType>()) { }
@@ -245,7 +245,7 @@ AntRoutingTable::UpdatePheromoneEntry(Ipv4Address neighbor, Ipv4Address dest, Ti
   }
   // update the entry in the map
   std::shared_ptr<PheromoneEntry> pheromoneEntryPtr = neighborTablePtr->operator[](dest);
-  double extraPheromone = 2/(s_rho*timeEstimate.GetSeconds() + s_rho*hops*HopTime().GetSeconds());
+  double extraPheromone = 1/(s_rho*timeEstimate.GetSeconds() + (1-s_rho)*hops*HopTime().GetSeconds());
   pheromoneEntryPtr->Value(s_gamma * pheromoneEntryPtr->Value() + (1 - s_gamma)*extraPheromone);
   pheromoneEntryPtr->HopCount(s_bestEstCoeff * pheromoneEntryPtr ->HopCount() + (1-s_bestEstCoeff)*hops);
   auto timeUpdate = Seconds(s_bestEstCoeff* pheromoneEntryPtr->TimeEstimate().GetSeconds() + (1-s_bestEstCoeff)*timeEstimate.GetSeconds());

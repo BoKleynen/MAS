@@ -1,5 +1,5 @@
 # MAS-Project
-We used [ns-3](https://www.nsnam.org/) as our simulation environment.
+We used [ns-3](https://www.nsnam.org/) as our simulation environment, in which we implemented the ant-routing module.
 ## Prerequisites
 - Docker
 - make

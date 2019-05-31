@@ -1,4 +1,9 @@
 # MAS-Project
+## Prerequisites
+- Docker
+- make
+
+## Running the simulation
 execute
 ```bash
 make run

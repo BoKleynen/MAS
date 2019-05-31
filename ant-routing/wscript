@@ -40,6 +40,7 @@ def build(bld):
         'test/ant-packet-test-suite.cc',
         'test/ant-netdevice-test-suite.cc',
         'test/hello-ant-test-suite.cc',
+        'test/rtable-neighbor-failed.cc'
         ]
 
     headers = bld(features='ns3header')

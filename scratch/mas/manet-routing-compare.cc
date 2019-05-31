@@ -3,33 +3,22 @@
 #include "ns3/ant-routing-module.h"
 #include "ns3/netanim-module.h"
 
-using namespace ns3;
+namespace ns3 {
+namespace compare_experiments {
 
 NS_LOG_COMPONENT_DEFINE ("manet-routing-compare");
 
-int
-main (int argc, char *argv[])
+void
+RunComparisonExperiment ()
 {
-  std::vector<Scenario> scenarios;
-  scenarios.push_back (Scenario (20, 450));
-  scenarios.push_back (Scenario (25, 500));
-  scenarios.push_back (Scenario (30, 550));
-  scenarios.push_back (Scenario (35, 590));
-  scenarios.push_back (Scenario (40, 630));
-  scenarios.push_back (Scenario (45, 670));
-  // m_scenarios.push_back (Scenario (50, 750));
-  // m_scenarios.push_back (Scenario (75, 875));
-  // m_scenarios.push_back (Scenario (100, 1000));
-  // m_scenarios.push_back (Scenario (125, 1125));
-  // m_scenarios.push_back (Scenario (150, 1250));
+  std::vector<Scenario> scenarios {Scenario(20,450), Scenario (25, 500), Scenario (30, 550), Scenario (35, 590), Scenario (40, 630), Scenario (45, 670)};
 
-  std::vector<int> protocols;
-  // protocols.push_back(2);
-  protocols.push_back(4);
 
-  for (auto protocol : protocols)
+  std::vector<int> protocols { ANTHOCNET_PROTOCOL, AODV_PROTOCOL };
+
+  for (auto scenario : scenarios)
   {
-    for (auto scenario : scenarios)
+    for (auto protocol : protocols)
     {
       RoutingExperimentSuite experimentSuite (10, scenario, protocol);
       experimentSuite.RunSuite ();
@@ -66,7 +55,7 @@ RoutingExperimentSuite::RunSuite ()
 
   for (int i = 0; i < m_nSimulations; i++)
   {
-    ns3::RngSeedManager::SetRun(i);        
+    ns3::RngSeedManager::SetRun(i);
     RoutingExperiment experiment (m_protocol, nSinks, m_scenario);
     experiment.Run ();
     m_results.push_back (experiment.GetResult ());
@@ -103,15 +92,19 @@ RoutingExperimentSuite::GetResult () const
 
 // RoutingExperiment ------------------------------
 
-// RoutingExperiment::RoutingExperiment ()
-//   : port (3001),
-//     bytesTotal (0),
-//     packetsReceived (0),
-//     m_traceMobility (false),
-//     m_protocol (2), // AODV
-//     m_txp(7.5)
-// {
-// }
+bool RoutingExperiment::s_writeTraces = true;
+
+bool
+RoutingExperiment::WriteTracesEnabled() {
+  return s_writeTraces;
+}
+
+void
+RoutingExperiment::WriteTracesEnabled(bool val) {
+  s_writeTraces = val;
+}
+
+
 
 RoutingExperiment::RoutingExperiment (uint32_t protocol, int nSinks, Scenario scenario)
 : port (3001),
@@ -176,7 +169,9 @@ RoutingExperiment::Run ()
   Simulator::Stop (Seconds (TotalTime));
   Simulator::Run ();
   m_flowmon->CheckForLostPackets ();
-  m_flowmon->SerializeToXmlFile ((tr_name + ".flowmon").c_str(), true, true);
+  if(WriteTracesEnabled()) {
+    m_flowmon->SerializeToXmlFile ((tr_name + ".flowmon").c_str(), true, true);
+  }
 
   Simulator::Destroy ();
 }
@@ -262,26 +257,6 @@ RoutingExperiment::ReceivePacket (Ptr<Socket> socket)
     }
 }
 
-// void
-// RoutingExperiment::CheckThroughput ()
-// {
-//   double kbs = (bytesTotal * 8.0) / 1000;
-//   bytesTotal = 0;
-
-//   std::ofstream out (m_CSVfileName.c_str (), std::ios::app);
-
-//   out << (Simulator::Now ()).GetSeconds () << ","
-//       << kbs << ","
-//       << packetsReceived << ","
-//       << m_nSinks << ","
-//       << m_protocolName << ","
-//       << m_txp << ""
-//       << std::endl;
-
-//   out.close ();
-//   packetsReceived = 0;
-//   Simulator::Schedule (Seconds (1.0), &RoutingExperiment::CheckThroughput, this);
-// }
 
 Ptr<Socket>
 RoutingExperiment::SetupPacketReceive (Ipv4Address addr, Ptr<Node> node)
@@ -295,16 +270,6 @@ RoutingExperiment::SetupPacketReceive (Ipv4Address addr, Ptr<Node> node)
   return sink;
 }
 
-// std::string
-// RoutingExperiment::CommandSetup (int argc, char **argv)
-// {
-//   CommandLine cmd;
-//   cmd.AddValue ("CSVfileName", "The name of the CSV output file name", m_CSVfileName);
-//   cmd.AddValue ("traceMobility", "Enable mobility tracing", m_traceMobility);
-//   cmd.AddValue ("protocol", "1=OLSR;2=AODV;3=DSDV;4=DSR", m_protocol);
-//   cmd.Parse (argc, argv);
-//   return m_CSVfileName;
-// }
 
 void
 RoutingExperiment::SetupNodes ()
@@ -530,3 +495,6 @@ Scenario::Scenario (int nNodes, int size)
     size (size)
 {
 }
+
+} // namespace compare_experiments
+} // namespace ns3

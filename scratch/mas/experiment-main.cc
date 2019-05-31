@@ -1,4 +1,4 @@
-// #include "rho-compare-experiment.h"
+#include "manet-routing-compare.h"
 #include "param-experiment-suite.h"
 using namespace ns3;
 
@@ -86,6 +86,10 @@ const std::vector<double> probabilityVector { 0.05, 0.1, 0.15, 0.20 };
 int
 main (int argc, char *argv[])
 {
+
+  std::cout << "Running comparison experiment: Anthocnet Vs Aodv" << std::endl;
+  compare_experiments::RunComparisonExperiment();
+
   std::cout << "Running the Rho tweaking experiment: " << std::endl;
   ant_experiment::ParamExperimentSuite rhoExperiment;
   rhoExperiment.RunSuite<double>(rhoVector, RhoSetter, RhoPrinter);

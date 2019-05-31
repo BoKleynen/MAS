@@ -17,7 +17,13 @@
 #ifndef ROUTING_EXPERIMENT
 #define ROUTING_EXPERIMENT
 
-using namespace ns3;
+namespace ns3 {
+namespace compare_experiments {
+
+static constexpr int ANTHOCNET_PROTOCOL = 4;
+static constexpr int AODV_PROTOCOL = 2;
+
+void RunComparisonExperiment();
 
 struct Scenario {
   int nNodes;
@@ -46,6 +52,7 @@ struct Result
 class RoutingExperimentSuite
 {
 public:
+
   RoutingExperimentSuite (uint8_t nSimulations, Scenario scenario, int protocol);
 
   void RunSuite ();
@@ -79,6 +86,9 @@ public:
   //                                 int slotDistance);
   // std::string CommandSetup (int argc, char **argv);
   Result GetResult (void);
+
+  static bool WriteTracesEnabled();
+  static void WriteTracesEnabled(bool val);
 
 private:
   static constexpr const char* phyMode = "DsssRate11Mbps";
@@ -131,8 +141,13 @@ private:
 
   Ptr<FlowMonitor> m_flowmon;
   FlowMonitorHelper m_flowmonHelper;
+
+  static bool s_writeTraces;
 };
 
 std::ostream& operator <<(std::ostream& os, const Result& result);
+
+}
+}
 
 #endif // ROUTING_EXPERIMENT

@@ -12,7 +12,7 @@
 #include "ns3/applications-module.h"
 #include "ns3/yans-wifi-helper.h"
 #include "ns3/flow-monitor-module.h"
-#include "ns3/ant-routing.h"
+#include "ns3/ant-routing-module.h"
 
 #ifndef ROUTING_EXPERIMENT
 #define ROUTING_EXPERIMENT
@@ -62,7 +62,7 @@ public:
 
 private:
     Histogram &m_histogram;
-    
+
 };
 
 class RoutingExperiment
@@ -79,7 +79,7 @@ public:
 private:
   static constexpr const char* phyMode = "DsssRate11Mbps";
   static constexpr const char* rate = "2048bps";
-  
+
   Ptr<Socket> SetupPacketReceive (Ipv4Address addr, Ptr<Node> node);
   void ReceivePacket (Ptr<Socket> socket);
   // void CheckThroughput ();
@@ -96,7 +96,7 @@ private:
   uint32_t port;
   uint32_t bytesTotal;
   uint32_t packetsReceived;
-  
+
   bool m_traceMobility;
   uint32_t m_protocol;
   double m_txp;

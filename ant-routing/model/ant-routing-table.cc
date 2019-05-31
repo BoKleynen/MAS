@@ -99,10 +99,10 @@ bool operator==(const NeighborKey &lhs, const NeighborKey& rhs) {
 // AntRoutingTable definition --------------------------------------------------
 // static variables:
 double AntRoutingTable::s_antBeta = 1.0;
-double AntRoutingTable::s_packetBeta = 1.0;
-double AntRoutingTable::s_gamma = 0.7;
+double AntRoutingTable::s_packetBeta = 2.0;
+double AntRoutingTable::s_gamma = 0.7; // [0, 1]
 Time   AntRoutingTable::s_hopTime = MilliSeconds(3);
-double AntRoutingTable::s_bestEstCoeff = 0.5;
+double AntRoutingTable::s_bestEstCoeff = 0.7; // [0, 1]
 double AntRoutingTable::s_rho = 1.0;
 
 // implementation of methods

@@ -1,5 +1,6 @@
 #include "manet-routing-compare.h"
 #include "ns3/ant-routing-module.h"
+#include "ns3/netanim-module.h"
 
 using namespace ns3;
 
@@ -8,6 +9,7 @@ NS_LOG_COMPONENT_DEFINE ("manet-routing-compare");
 int
 main (int argc, char *argv[])
 {
+  NS_LOG_UNCOND("Starting manet routing compare");
   RoutingExperimentSuite experimentSuite (1);
   experimentSuite.RunSuite ();
 }
@@ -17,7 +19,14 @@ main (int argc, char *argv[])
 RoutingExperimentSuite::RoutingExperimentSuite (uint8_t nSimulations)
   : m_nSimulations (nSimulations)
 {
-  m_scenarios.push_back (Scenario (50, 750));
+
+  m_scenarios.push_back (Scenario (20, 450));
+  m_scenarios.push_back (Scenario (25, 500));
+  m_scenarios.push_back (Scenario (30, 550));
+  m_scenarios.push_back (Scenario (35, 590));
+  m_scenarios.push_back (Scenario (40, 630));
+  m_scenarios.push_back (Scenario (45, 670));
+  // m_scenarios.push_back (Scenario (50, 750));
   // m_scenarios.push_back (Scenario (75, 875));
   // m_scenarios.push_back (Scenario (100, 1000));
   // m_scenarios.push_back (Scenario (125, 1125));
@@ -27,15 +36,22 @@ RoutingExperimentSuite::RoutingExperimentSuite (uint8_t nSimulations)
 void
 RoutingExperimentSuite::RunSuite ()
 {
-  int nSinks = 10;
+  std::vector<int> protocols;
+  protocols.push_back(2);
+  protocols.push_back(4);
+
+  int nSinks = 5;
   for (auto scenario : m_scenarios)
   {
-    for (int i = 0; i < m_nSimulations; i++)
+    for (auto protocol : protocols)
     {
-      RoutingExperiment experiment (2, nSinks, scenario);
-      experiment.Run ();
-      m_results.push_back (experiment.GetResult ());
-      std::cout << experiment.GetResult () << std::endl << std::flush;
+      for (int i = 0; i < m_nSimulations; i++)
+      {
+        RoutingExperiment experiment (protocol, nSinks, scenario);
+        experiment.Run ();
+        m_results.push_back (experiment.GetResult ());
+        std::cout << experiment.GetResult () << std::endl << std::flush;
+      }
     }
   }
 }
@@ -64,7 +80,7 @@ RoutingExperiment::RoutingExperiment (uint32_t protocol, int nSinks, Scenario sc
   packetsReceived (0),
   m_traceMobility (false),
   m_protocol (protocol),
-  m_txp (7.5),
+  m_txp (2),
   m_nSinks (nSinks),
   m_scenario (scenario)
 {
@@ -78,6 +94,7 @@ RoutingExperiment::Run ()
   Config::SetDefault ("ns3::OnOffApplication::DataRate",  StringValue (rate));
   //Set Non-unicastMode rate to unicast mode
   Config::SetDefault ("ns3::WifiRemoteStationManager::NonUnicastMode",StringValue (phyMode));
+  Config::SetDefault ("ns3::RangePropagationLossModel::MaxRange", DoubleValue (200));
 
   SetupNodes ();
   SetupWifi ();
@@ -98,6 +115,24 @@ RoutingExperiment::Run ()
   NS_LOG_INFO ("Run Simulation.");
 
   // CheckThroughput ();
+  AnimationInterface anim (tr_name + ".netanim");
+
+  for (uint32_t i = 0; i < m_senderNodes.GetN (); i++)
+  {
+    anim.UpdateNodeDescription (m_senderNodes.Get (i), "SEND"); // Optional
+    anim.UpdateNodeColor (m_senderNodes.Get (i), 255, 0, 0); // Optional
+  }
+
+  for (uint32_t i = 0; i < m_receiverNodes.GetN (); i++)
+  {
+    anim.UpdateNodeDescription (m_receiverNodes.Get (i), "RECV"); // Optional
+    anim.UpdateNodeColor (m_receiverNodes.Get (i), 0, 255, 0); // Optional
+  }
+
+  anim.EnablePacketMetadata (); // Optional
+  anim.EnableIpv4RouteTracking ("routingtable-wireless.xml", Seconds (0), Seconds (5), Seconds (0.25)); //Optional
+  anim.EnableWifiMacCounters (Seconds (0), Seconds (10)); //Optional
+  anim.EnableWifiPhyCounters (Seconds (0), Seconds (10)); //Optional
 
   Simulator::Stop (Seconds (TotalTime));
   Simulator::Run ();
@@ -113,6 +148,7 @@ RoutingExperiment::GetResult ()
   Result result;
   result.protocolName = m_protocolName;
   result.nNodes = m_allNodes.GetN ();
+  result.throughput = 0;
 
   double totalAverageDelay = 0;
   double totalAverageJitter = 0;
@@ -134,7 +170,7 @@ RoutingExperiment::GetResult ()
       nDataFlows++;
       totalAverageDelay += HistHelper (flowStats.delayHistogram).Average ();
       totalAverageJitter += HistHelper (flowStats.jitterHistogram).Average ();
-      result.throughput += static_cast<double> (flowStats.rxBytes) * 8.0 / flowStats.timeLastRxPacket.GetSeconds () - flowStats.timeFirstTxPacket.GetSeconds () / 1024.0;
+      result.throughput += static_cast<double> (flowStats.rxBytes) / static_cast<double> (flowStats.timeLastRxPacket.GetSeconds () - flowStats.timeFirstTxPacket.GetSeconds ()) / 1024.0 * 8.0;
       txDataPackets += static_cast<double> (flowStats.txPackets);
       rxDataPackets += static_cast<double> (flowStats.rxPackets);
       dataBytes += static_cast<double> (flowStats.rxBytes);
@@ -235,7 +271,7 @@ void
 RoutingExperiment::SetupNodes ()
 {
   NS_LOG_INFO ("Setting up nodes.");
-  m_adhocNodes.Create (m_scenario.nNodes - 20);
+  m_adhocNodes.Create (m_scenario.nNodes - 2*m_nSinks);
   m_senderNodes.Create (m_nSinks);
   m_receiverNodes.Create (m_nSinks);
   m_allNodes.Add (m_adhocNodes);
@@ -253,7 +289,7 @@ RoutingExperiment::SetupWifi ()
 
   YansWifiChannelHelper wifiChannel;
   wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
-  wifiChannel.AddPropagationLoss ("ns3::FriisPropagationLossModel");
+  wifiChannel.AddPropagationLoss ("ns3::RangePropagationLossModel");
   wifiPhy.SetChannel (wifiChannel.Create ());
 
   // Add a mac and disable rate control
@@ -292,8 +328,8 @@ RoutingExperiment::SetupMobility ()
   streamIndex += taPositionAlloc->AssignStreams (streamIndex);
 
   mobilityAdhoc.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
-                                  "Speed", StringValue ("ns3::ConstantRandomVariable[Constant=5.0]"),
-                                  "Pause", StringValue ("ns3::ConstantRandomVariable[Constant=20.0]"),
+                                  "Speed", StringValue ("ns3::ConstantRandomVariable[Constant=10.0]"),
+                                  "Pause", StringValue ("ns3::ConstantRandomVariable[Constant=10.0]"),
                                   "PositionAllocator", PointerValue (taPositionAlloc));
   mobilityAdhoc.SetPositionAllocator (taPositionAlloc);
   mobilityAdhoc.Install (m_allNodes);
@@ -414,12 +450,17 @@ HistHelper::HistHelper (Histogram &hist)
 double
 HistHelper::Average ()
 {
+  if (m_histogram.GetNBins () == 0) {
+    return 0;
+  }
+
   double total = 0;
   for (uint32_t i = 0; i < m_histogram.GetNBins (); i++)
   {
-    total += static_cast<double> (m_histogram.GetBinCount (i)) * (m_histogram.GetBinStart (i) + m_histogram.GetBinWidth (i) / 2.0);
+    total += static_cast<double> (m_histogram.GetBinCount (i)) * ( static_cast<double> (m_histogram.GetBinStart (i)) + ( static_cast<double> (m_histogram.GetBinWidth (i)) / 2.0));
   }
-  return total / m_histogram.GetNBins ();
+
+  return total / static_cast<double> (m_histogram.GetNBins ());
 }
 
 std::ostream& operator <<(std::ostream& os, const Result& result)
@@ -434,7 +475,7 @@ std::ostream& operator <<(std::ostream& os, const Result& result)
             << result.averageJitter
             << ", packetDeliveryRatio: "
             << result.packetDeliveryRatio
-            << "%, throughput: "
+            << "\%, throughput: "
             << result.throughput
             << "kbps, packetOverhead: "
             << result.packetOverhead

@@ -268,7 +268,7 @@ AntNetDevice::AntNetDeviceImpl::SubmitExpedited(std::shared_ptr<SendQueueEntry> 
 // constexpr std::string AntNetDevice::TxOkHeader = "TxOkHeader";
 // constexpr std::string AntNetDevice::TxErrHeader = "TxErrHeader";
 // static variable definition --------------------------------------------------
-double AntNetDevice::s_alpha = 0.5;
+double AntNetDevice::s_alpha = 0.7; // [0, 7]
 
 std::size_t AntNetDevice::s_maxQueueSize = DEFAULT_MAX_QUEUESIZE;
 

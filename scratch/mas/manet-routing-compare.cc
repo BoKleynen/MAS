@@ -80,7 +80,7 @@ RoutingExperiment::RoutingExperiment (uint32_t protocol, int nSinks, Scenario sc
   packetsReceived (0),
   m_traceMobility (false),
   m_protocol (protocol),
-  m_txp (7.5),
+  m_txp (2),
   m_nSinks (nSinks),
   m_scenario (scenario)
 {
@@ -94,6 +94,7 @@ RoutingExperiment::Run ()
   Config::SetDefault ("ns3::OnOffApplication::DataRate",  StringValue (rate));
   //Set Non-unicastMode rate to unicast mode
   Config::SetDefault ("ns3::WifiRemoteStationManager::NonUnicastMode",StringValue (phyMode));
+  Config::SetDefault ("ns3::RangePropagationLossModel::MaxRange", DoubleValue (200));
 
   SetupNodes ();
   SetupWifi ();
@@ -288,7 +289,7 @@ RoutingExperiment::SetupWifi ()
 
   YansWifiChannelHelper wifiChannel;
   wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
-  wifiChannel.AddPropagationLoss ("ns3::FriisPropagationLossModel");
+  wifiChannel.AddPropagationLoss ("ns3::RangePropagationLossModel");
   wifiPhy.SetChannel (wifiChannel.Create ());
 
   // Add a mac and disable rate control
@@ -327,8 +328,8 @@ RoutingExperiment::SetupMobility ()
   streamIndex += taPositionAlloc->AssignStreams (streamIndex);
 
   mobilityAdhoc.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
-                                  "Speed", StringValue ("ns3::ConstantRandomVariable[Constant=5.0]"),
-                                  "Pause", StringValue ("ns3::ConstantRandomVariable[Constant=20.0]"),
+                                  "Speed", StringValue ("ns3::ConstantRandomVariable[Constant=10.0]"),
+                                  "Pause", StringValue ("ns3::ConstantRandomVariable[Constant=10.0]"),
                                   "PositionAllocator", PointerValue (taPositionAlloc));
   mobilityAdhoc.SetPositionAllocator (taPositionAlloc);
   mobilityAdhoc.Install (m_allNodes);
@@ -449,11 +450,16 @@ HistHelper::HistHelper (Histogram &hist)
 double
 HistHelper::Average ()
 {
+  if (m_histogram.GetNBins () == 0) {
+    return 0;
+  }
+
   double total = 0;
   for (uint32_t i = 0; i < m_histogram.GetNBins (); i++)
   {
-    total += static_cast<double> (m_histogram.GetBinCount (i)) * (m_histogram.GetBinStart (i) + m_histogram.GetBinWidth (i) / 2.0);
+    total += static_cast<double> (m_histogram.GetBinCount (i)) * ( static_cast<double> (m_histogram.GetBinStart (i)) + ( static_cast<double> (m_histogram.GetBinWidth (i)) / 2.0));
   }
+
   return total / static_cast<double> (m_histogram.GetNBins ());
 }
 

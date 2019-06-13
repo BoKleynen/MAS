@@ -16,7 +16,7 @@ How does the `s_packetBeta` parameter impact performance?
 > Martijn?
 
 How does the acceptance factor impact performance?
-> We expect there to be a single suite spot.
+> We expect there to be a single sweetspot.
 
 Martijn factor?
 > Martijn?
